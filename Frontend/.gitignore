@@ -15,7 +15,8 @@ next-env.d.ts
 
 # Testing & Coverage
 coverage/
-*.png
+tests/*.png
+*.tmp
 
 # Environment Variables
 .env
