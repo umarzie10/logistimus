@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="540" viewBox="0 0 640 540" fill="none"><defs>
+    <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E7F1FB"/>
+      <stop offset="0.55" stop-color="#F4FEFF"/>
+      <stop offset="1" stop-color="#FAFFFF"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="softShadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0A2156" stop-opacity="0.28"/>
+      <stop offset="0.6" stop-color="#0A2156" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#0A2156" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coreGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#A9C0E0" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#A9C0E0" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#A9C0E0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blurSm" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.6"/>
+    </filter>
+    <filter id="blurMd" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5"/>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs><circle cx="320" cy="270" r="180" fill="none" stroke="#4C69A0" stroke-width="1" opacity="0.2" stroke-dasharray="4 8"/>
+<circle cx="320" cy="270" r="110" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.3" stroke-dasharray="6 6"/>
+<circle cx="320" cy="270" r="65" fill="none" stroke="#F4FEFF" stroke-width="1.4" opacity="0.5"/>
+<line x1="170" y1="140" x2="470" y2="135" stroke="#4C69A0" stroke-width="1" opacity="0.35"/>
+<line x1="470" y1="135" x2="520" y2="275" stroke="#4C69A0" stroke-width="1" opacity="0.35"/>
+<line x1="520" y1="275" x2="460" y2="410" stroke="#4C69A0" stroke-width="1" opacity="0.35"/>
+<line x1="460" y1="410" x2="180" y2="405" stroke="#4C69A0" stroke-width="1" opacity="0.35"/>
+<line x1="180" y1="405" x2="120" y2="270" stroke="#4C69A0" stroke-width="1" opacity="0.35"/>
+<line x1="120" y1="270" x2="170" y2="140" stroke="#4C69A0" stroke-width="1" opacity="0.35"/>
+<line x1="320" y1="270" x2="170" y2="140" stroke="#A9C0E0" stroke-width="1.8" opacity="0.6"/>
+<line x1="320" y1="270" x2="470" y2="135" stroke="#A9C0E0" stroke-width="1.8" opacity="0.6"/>
+<line x1="320" y1="270" x2="520" y2="275" stroke="#A9C0E0" stroke-width="1.8" opacity="0.6"/>
+<line x1="320" y1="270" x2="460" y2="410" stroke="#A9C0E0" stroke-width="1.8" opacity="0.6"/>
+<line x1="320" y1="270" x2="180" y2="405" stroke="#A9C0E0" stroke-width="1.8" opacity="0.6"/>
+<line x1="320" y1="270" x2="120" y2="270" stroke="#A9C0E0" stroke-width="1.8" opacity="0.6"/>
+<line x1="170" y1="140" x2="130" y2="110" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="130" cy="110" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="170" y1="140" x2="195" y2="95" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="195" cy="95" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="170" y1="140" x2="140" y2="180" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="140" cy="180" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="470" y1="135" x2="440" y2="95" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="440" cy="95" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="470" y1="135" x2="510" y2="105" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="510" cy="105" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="470" y1="135" x2="490" y2="185" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="490" cy="185" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="520" y1="275" x2="560" y2="240" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="560" cy="240" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="520" y1="275" x2="550" y2="315" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="550" cy="315" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="460" y1="410" x2="430" y2="445" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="430" cy="445" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="460" y1="410" x2="495" y2="440" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="495" cy="440" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="180" y1="405" x2="140" y2="435" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="140" cy="435" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="180" y1="405" x2="205" y2="445" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="205" cy="445" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="120" y1="270" x2="85" y2="235" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="85" cy="235" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<line x1="120" y1="270" x2="95" y2="305" stroke="#4C69A0" stroke-width="1" opacity="0.4"/>
+<circle cx="95" cy="305" r="3.5" fill="#A9C0E0" opacity="0.85"/>
+<circle cx="237.5" cy="198.5" r="3" fill="#F4FEFF"/>
+<circle cx="402.5" cy="195.8" r="3" fill="#F4FEFF"/>
+<circle cx="430.0" cy="272.8" r="3" fill="#F4FEFF"/>
+<circle cx="397.0" cy="347.0" r="3" fill="#F4FEFF"/>
+<circle cx="243.0" cy="344.3" r="3" fill="#F4FEFF"/>
+<circle cx="210.0" cy="270.0" r="3" fill="#F4FEFF"/>
+<circle cx="170" cy="140" r="24" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.6"/>
+<circle cx="170" cy="140" r="16" fill="#0A2156" stroke="#A9C0E0" stroke-width="1.6"/>
+<circle cx="170" cy="140" r="6" fill="#F4FEFF"/>
+<circle cx="470" cy="135" r="24" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.6"/>
+<circle cx="470" cy="135" r="16" fill="#0A2156" stroke="#A9C0E0" stroke-width="1.6"/>
+<circle cx="470" cy="135" r="6" fill="#F4FEFF"/>
+<circle cx="520" cy="275" r="24" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.6"/>
+<circle cx="520" cy="275" r="16" fill="#0A2156" stroke="#A9C0E0" stroke-width="1.6"/>
+<circle cx="520" cy="275" r="6" fill="#F4FEFF"/>
+<circle cx="460" cy="410" r="24" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.6"/>
+<circle cx="460" cy="410" r="16" fill="#0A2156" stroke="#A9C0E0" stroke-width="1.6"/>
+<circle cx="460" cy="410" r="6" fill="#F4FEFF"/>
+<circle cx="180" cy="405" r="24" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.6"/>
+<circle cx="180" cy="405" r="16" fill="#0A2156" stroke="#A9C0E0" stroke-width="1.6"/>
+<circle cx="180" cy="405" r="6" fill="#F4FEFF"/>
+<circle cx="120" cy="270" r="24" fill="none" stroke="#A9C0E0" stroke-width="1.2" opacity="0.6"/>
+<circle cx="120" cy="270" r="16" fill="#0A2156" stroke="#A9C0E0" stroke-width="1.6"/>
+<circle cx="120" cy="270" r="6" fill="#F4FEFF"/>
+<circle cx="320" cy="270" r="46" fill="#A9C0E0" opacity="0.22" filter="url(#blurMd)"/>
+<circle cx="320" cy="270" r="32" fill="#0A2156" stroke="#F4FEFF" stroke-width="2"/>
+<circle cx="320" cy="270" r="22" fill="#0E2F76" stroke="#A9C0E0" stroke-width="1.5"/>
+<circle cx="320" cy="270" r="11" fill="#F4FEFF"/>
+<circle cx="320" cy="270" r="4" fill="#0E2F76"/>
+<rect x="123.4" y="107.0" width="57.2" height="14" rx="7" fill="#061336" stroke="#4C69A0" stroke-width="0.8"/>
+<text x="152.0" y="117.0" fill="#A9C0E0" font-family="sans-serif" font-size="8" font-weight="600" text-anchor="middle">Dispatch</text>
+<rect x="442.0" y="102.0" width="68.0" height="14" rx="7" fill="#061336" stroke="#4C69A0" stroke-width="0.8"/>
+<text x="476.0" y="112.0" fill="#A9C0E0" font-family="sans-serif" font-size="8" font-weight="600" text-anchor="middle">Telematics</text>
+<rect x="506.1" y="264.0" width="51.8" height="14" rx="7" fill="#061336" stroke="#4C69A0" stroke-width="0.8"/>
+<text x="532.0" y="274.0" fill="#A9C0E0" font-family="sans-serif" font-size="8" font-weight="600" text-anchor="middle">Routing</text>
+<rect x="440.1" y="429.0" width="51.8" height="14" rx="7" fill="#061336" stroke="#4C69A0" stroke-width="0.8"/>
+<text x="466.0" y="439.0" fill="#A9C0E0" font-family="sans-serif" font-size="8" font-weight="600" text-anchor="middle">Finance</text>
+<rect x="126.7" y="424.0" width="62.6" height="14" rx="7" fill="#061336" stroke="#4C69A0" stroke-width="0.8"/>
+<text x="158.0" y="434.0" fill="#A9C0E0" font-family="sans-serif" font-size="8" font-weight="600" text-anchor="middle">Warehouse</text>
+<rect x="82.8" y="259.0" width="46.4" height="14" rx="7" fill="#061336" stroke="#4C69A0" stroke-width="0.8"/>
+<text x="106.0" y="269.0" fill="#A9C0E0" font-family="sans-serif" font-size="8" font-weight="600" text-anchor="middle">Demand</text></svg>

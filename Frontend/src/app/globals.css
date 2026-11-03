@@ -1,0 +1,231 @@
+@import "tailwindcss";
+
+/* =============================================================================
+   Logistimus design tokens — source of truth: ./DESIGN.md
+   ========================================================================== */
+
+@theme inline {
+  --font-sans: var(--font-hanken), "Helvetica Neue", system-ui, sans-serif;
+  --font-mono: var(--font-dm-mono), ui-monospace, monospace;
+}
+
+@theme {
+  /* Core palette */
+  --color-ice: #f4feff;
+  --color-powder: #a9c0e0;
+  --color-royal: #0e2f76;
+  --color-midnight: #061336;
+
+  /* Blue ramp */
+  --color-blue-50: #f4feff;
+  --color-blue-100: #dbe9f5;
+  --color-blue-200: #c2d5ea;
+  --color-blue-300: #a9c0e0;
+  --color-blue-400: #8aa3cb;
+  --color-blue-500: #6b86b6;
+  --color-blue-600: #4c69a0;
+  --color-blue-700: #2d4c8b;
+  --color-blue-800: #0e2f76;
+  --color-blue-900: #0a2156;
+  --color-blue-950: #061336;
+
+  /* Warm neutral (docs / print only) */
+  --color-stone-50: #f6f4f0;
+  --color-stone-100: #ece9e3;
+  --color-stone-200: #d9d5cc;
+  --color-stone-400: #a8a398;
+  --color-stone-600: #6f6b62;
+  --color-stone-800: #3a3833;
+
+  /* Muted semantic states — always paired with an icon and a label */
+  --color-success: #7fa9a6;
+  --color-warning: #c9b58a;
+  --color-danger: #c08a88;
+
+  /* Text + lines */
+  --color-muted: #3f5c96;
+  --color-line: #cfdbee;
+
+  /* Shape */
+  --radius-card: 28px;
+  --radius-frame: 20px;
+  --radius-input: 16px;
+
+  /* Tracking */
+  --tracking-label: 0.16em;
+  --tracking-display: -0.025em;
+}
+
+/* =============================================================================
+   Base
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 96px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-ice);
+  color: var(--color-royal);
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 1.6;
+  font-weight: 400;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: var(--color-powder);
+  color: var(--color-royal);
+}
+
+/* Focus: 3px Powder ring, 2px offset (DESIGN.md §5) */
+:focus-visible {
+  outline: 3px solid var(--color-powder);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: fixed;
+  top: -100px;
+  left: 16px;
+  z-index: 100;
+  border-radius: 999px;
+  background: var(--color-royal);
+  color: var(--color-ice);
+  padding: 12px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  transition: top 150ms ease;
+}
+
+.skip-link:focus-visible {
+  top: 16px;
+}
+
+/* =============================================================================
+   Type roles (DESIGN.md §3.1)
+   ========================================================================== */
+
+@layer components {
+  .type-display {
+    font-size: clamp(42px, 5.4vw, 72px);
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    line-height: 1.04;
+    text-wrap: balance;
+  }
+
+  .type-heading {
+    font-size: clamp(24px, 2.4vw, 28px);
+    font-weight: 300;
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+    text-wrap: balance;
+  }
+
+  .type-subline {
+    font-size: clamp(19px, 1.9vw, 24px);
+    font-weight: 300;
+    line-height: 1.35;
+    text-wrap: pretty;
+  }
+
+  .type-body {
+    font-size: 16px;
+    font-weight: 400;
+    line-height: 1.6;
+    max-width: 68ch;
+    text-wrap: pretty;
+  }
+
+  .type-label {
+    font-size: 12.5px;
+    font-weight: 300;
+    line-height: 1.3;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .type-stat {
+    font-size: clamp(40px, 4vw, 48px);
+    font-weight: 300;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .type-mono {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    line-height: 1.4;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .container-page {
+    width: 100%;
+    max-width: 1128px; /* 1080 content + 2×24 padding */
+    margin-inline: auto;
+    padding-inline: 24px;
+  }
+}
+
+/* =============================================================================
+   Motion (DESIGN.md §9 + landing rules)
+   Base curve: cubic-bezier(0.22, 1, 0.36, 1)
+   ========================================================================== */
+
+@keyframes hero-enter {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes hero-scene-enter {
+  from {
+    opacity: 0;
+    transform: scale(1.015);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-hero-panel {
+  animation: hero-enter 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-hero-scene {
+  animation: hero-scene-enter 800ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.transition-base {
+  transition-property: color, background-color, border-color, opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}

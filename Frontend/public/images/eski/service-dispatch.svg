@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360" viewBox="0 0 480 360" fill="none"><defs>
+    <linearGradient id="skyG" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E7F1FB"/>
+      <stop offset="0.55" stop-color="#F4FEFF"/>
+      <stop offset="1" stop-color="#FAFFFF"/>
+    </linearGradient>
+    <radialGradient id="sunGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.95"/>
+      <stop offset="0.5" stop-color="#FFFFFF" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="softShadow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0A2156" stop-opacity="0.28"/>
+      <stop offset="0.6" stop-color="#0A2156" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#0A2156" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="coreGlow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#A9C0E0" stop-opacity="0.55"/>
+      <stop offset="0.6" stop-color="#A9C0E0" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#A9C0E0" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blurSm" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="1.6"/>
+    </filter>
+    <filter id="blurMd" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3.5"/>
+    </filter>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs><defs>
+    <linearGradient id="nTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2A5AB0"/><stop offset="1" stop-color="#163B84"/></linearGradient>
+    <linearGradient id="nLeft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#143D8F"/><stop offset="1" stop-color="#0C2A63"/></linearGradient>
+    <linearGradient id="nRight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0E2F76"/><stop offset="1" stop-color="#081F4C"/></linearGradient>
+    <linearGradient id="wTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#EAF3FB"/></linearGradient>
+    <linearGradient id="wLeft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E8F1FA"/><stop offset="1" stop-color="#D6E4F3"/></linearGradient>
+    <linearGradient id="wRight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#D7E5F4"/><stop offset="1" stop-color="#C3D6EC"/></linearGradient>
+    <linearGradient id="pTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CBDBEE"/><stop offset="1" stop-color="#A9C0E0"/></linearGradient>
+    <linearGradient id="pLeft" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A9C0E0"/><stop offset="1" stop-color="#8AA3CB"/></linearGradient>
+    <linearGradient id="pRight" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#94AECF"/><stop offset="1" stop-color="#7591BC"/></linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF" stop-opacity="0.9"/><stop offset="1" stop-color="#CFDBEE" stop-opacity="0.4"/></linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBC94B"/><stop offset="1" stop-color="#E8A61C"/></linearGradient>
+    <linearGradient id="green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#34D399"/><stop offset="1" stop-color="#10B981"/></linearGradient>
+  </defs><ellipse cx="240" cy="266" rx="150" ry="24" fill="url(#softShadow)"/><polygon points="69.6,193.6 268.4,308.4 268.4,295.3 69.6,180.5" fill="url(#wLeft)"/><polygon points="417.5,222.3 268.4,308.4 268.4,295.3 417.5,209.2" fill="url(#wRight)"/><polygon points="218.7,94.4 417.5,209.2 268.4,295.3 69.6,180.5" fill="url(#wTop)"/><polyline points="69.6,180.5 268.4,295.3 417.5,209.2" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.5"/><polygon points="247.1,110.0 254.2,114.1 105.1,200.2 98.0,196.1" fill="#E8F1FA"/><polygon points="282.6,130.5 289.7,134.6 140.6,220.7 133.5,216.6" fill="#E8F1FA"/><polygon points="318.1,151.0 325.2,155.1 176.1,241.2 169.0,237.1" fill="#E8F1FA"/><polygon points="353.6,171.5 360.7,175.6 211.6,261.7 204.5,257.6" fill="#E8F1FA"/><polygon points="389.1,192.0 396.2,196.1 247.1,282.2 240.0,278.1" fill="#E8F1FA"/><polygon points="190.3,110.0 389.1,224.8 382.0,228.9 183.2,114.1" fill="#E8F1FA"/><polygon points="154.8,130.5 353.6,245.3 346.5,249.4 147.7,134.6" fill="#E8F1FA"/><polygon points="119.3,151.0 318.1,265.8 311.0,269.9 112.2,155.1" fill="#E8F1FA"/><polygon points="83.8,171.5 282.6,286.3 275.5,290.4 76.7,175.6" fill="#E8F1FA"/><path d="M 126.4 177.2 L 204.5 181.3 L 218.7 214.1 L 311.0 210.0 L 367.8 210.0" fill="none" stroke="#0E2F76" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 126.4 177.2 L 204.5 181.3 L 218.7 214.1 L 311.0 210.0 L 367.8 210.0" fill="none" stroke="#A9C0E0" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/><g transform="translate(126.4,143.2)"><path d="M0 0 C -12 -18 -18 -24 -18 -34 A 18 18 0 1 1 18 -34 C 18 -24 12 -18 0 0 Z" fill="#6B86B6"/><circle cy="-34" r="7" fill="#F4FEFF"/></g><g transform="translate(367.8,176.0)"><path d="M0 0 C -12 -18 -18 -24 -18 -34 A 18 18 0 1 1 18 -34 C 18 -24 12 -18 0 0 Z" fill="#0E2F76"/><circle cy="-34" r="7" fill="#F4FEFF"/></g></svg>

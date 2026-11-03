@@ -1,0 +1,379 @@
+"use client";
+
+import { useState } from "react";
+import { AppShell } from "@/components/app/AppShell";
+import { downloadTextFile, toCsv } from "@/lib/download";
+import {
+  Search,
+  Plus,
+  Download,
+  Eye,
+  X,
+} from "lucide-react";
+
+interface Order {
+  id: string;
+  customer: string;
+  cargo: string;
+  weight: string;
+  origin: string;
+  destination: string;
+  driver: string;
+  status: "In transit" | "Delivered" | "Loading" | "Delayed" | "Draft";
+  created: string;
+  eta: string;
+}
+
+const ORDERS_DATA: Order[] = [
+  {
+    id: "ORD-24101",
+    customer: "Northwind Freight Corp",
+    cargo: "Industrial Electronic Components",
+    weight: "14,200 kg",
+    origin: "Tashkent Central Depot",
+    destination: "Samarkand Regional Hub",
+    driver: "Akmal Saidov (TRK-01)",
+    status: "In transit",
+    created: "Today, 06:30",
+    eta: "Today, 14:30",
+  },
+  {
+    id: "ORD-24102",
+    customer: "Axis Distribution Group",
+    cargo: "Pharmaceuticals & Temperature-Controlled Medicals",
+    weight: "8,500 kg",
+    origin: "Bukhara Cold Facility",
+    destination: "Tashkent Medical Center",
+    driver: "Bobur Turgunov (REEFER-04)",
+    status: "Delivered",
+    created: "Yesterday, 14:00",
+    eta: "Delivered 09:20",
+  },
+  {
+    id: "ORD-24103",
+    customer: "Meridian Cargo LLC",
+    cargo: "Heavy Machined Steel Pipes",
+    weight: "22,400 kg",
+    origin: "Almaty Rail Freight Yard",
+    destination: "Shymkent Terminal",
+    driver: "Sardor Yusupov (FLAT-02)",
+    status: "Loading",
+    created: "Today, 08:15",
+    eta: "Tomorrow, 10:00",
+  },
+  {
+    id: "ORD-24104",
+    customer: "Bluepeak Retail Stores",
+    cargo: "Packaged Fast-Moving Consumer Goods",
+    weight: "11,800 kg",
+    origin: "Fergana Valley Distribution",
+    destination: "Namangan Depot 02",
+    driver: "Davron Karimov (TRK-09)",
+    status: "Delayed",
+    created: "Today, 05:45",
+    eta: "Today, 16:15 (+45m)",
+  },
+  {
+    id: "ORD-24105",
+    customer: "Silk Road Textiles",
+    cargo: "Export Cotton Yarn & Textiles",
+    weight: "18,900 kg",
+    origin: "Andijan Production Unit",
+    destination: "Tashkent International Cargo Terminal",
+    driver: "Jasur Mirzayev (TRK-14)",
+    status: "In transit",
+    created: "Today, 07:10",
+    eta: "Today, 15:45",
+  },
+  {
+    id: "ORD-24106",
+    customer: "Global Agritech Supply",
+    cargo: "Organic Fertilizers & Agro Chemicals",
+    weight: "16,000 kg",
+    origin: "Navoi Free Economic Zone",
+    destination: "Urgench Storage Hub",
+    driver: "Otabek Qodirov (TANK-03)",
+    status: "Loading",
+    created: "Today, 09:00",
+    eta: "Tomorrow, 08:30",
+  },
+];
+
+export default function OrdersPage() {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const handleExportCsv = () => {
+    const header = [
+      "Order ID",
+      "Customer",
+      "Cargo",
+      "Weight",
+      "Origin",
+      "Destination",
+      "Driver",
+      "Status",
+      "Created",
+      "ETA",
+    ];
+    const rows = filtered.map((o) => [
+      o.id,
+      o.customer,
+      o.cargo,
+      o.weight,
+      o.origin,
+      o.destination,
+      o.driver,
+      o.status,
+      o.created,
+      o.eta,
+    ]);
+    const csv = toCsv(header, rows);
+    downloadTextFile("orders-export.csv", csv, "text/csv;charset=utf-8");
+  };
+
+  const filtered = ORDERS_DATA.filter((o) => {
+    const matchesSearch =
+      o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.origin.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      o.destination.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === "all" || o.status.toLowerCase() === filterStatus.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
+
+  return (
+    <AppShell title="Order Management" subtitle="Manage shipments, cargo manifests, and status timelines">
+      {/* Action Header */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-2 flex-1 max-w-md">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 text-[#3F5C96] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <input
+              type="text"
+              placeholder="Search by order #, customer, city..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 rounded-input border border-[#CFDBEE] bg-[#FFFFFF] text-xs text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="px-3 py-2 rounded-input border border-[#CFDBEE] bg-[#FFFFFF] text-xs font-medium text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+          >
+            <option value="all">All Statuses</option>
+            <option value="in transit">In Transit</option>
+            <option value="delivered">Delivered</option>
+            <option value="loading">Loading</option>
+            <option value="delayed">Delayed</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-full border border-[#CFDBEE] bg-[#FFFFFF] text-xs font-medium text-[#0E2F76] hover:bg-[#F4FEFF]"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>Export CSV</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-xs font-medium text-[#FFFFFF] "
+          >
+            <Plus className="w-4 h-4" />
+            <span>Create New Order</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Orders Table Card */}
+      <div className="rounded-card bg-[#FFFFFF] border border-[#CFDBEE] overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead>
+              <tr className="border-b border-[#CFDBEE] bg-[#ffffff] text-[11px] font-mono uppercase text-[#3F5C96]">
+                <th className="py-3 px-4">Order ID</th>
+                <th className="py-3 px-4">Customer</th>
+                <th className="py-3 px-4">Cargo / Weight</th>
+                <th className="py-3 px-4">Route</th>
+                <th className="py-3 px-4">Assigned Driver</th>
+                <th className="py-3 px-4">Status</th>
+                <th className="py-3 px-4 text-right">ETA</th>
+                <th className="py-3 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#CFDBEE]/50">
+              {filtered.map((ord) => (
+                <tr key={ord.id} className="hover:bg-[#F4FEFF] transition-colors">
+                  <td className="py-3.5 px-4 font-mono font-semibold text-[#0E2F76]">
+                    {ord.id}
+                  </td>
+                  <td className="py-3.5 px-4 font-semibold text-[#061336]">
+                    {ord.customer}
+                  </td>
+                  <td className="py-3.5 px-4 text-[#3F5C96]">
+                    <div className="truncate max-w-[160px] font-medium text-[#061336]">{ord.cargo}</div>
+                    <div className="font-mono text-[10px] text-[#3F5C96]">{ord.weight}</div>
+                  </td>
+                  <td className="py-3.5 px-4 text-[#3F5C96]">
+                    <div className="text-[#061336] font-medium">{ord.origin}</div>
+                    <div className="text-[10px] text-[#3F5C96]">→ {ord.destination}</div>
+                  </td>
+                  <td className="py-3.5 px-4 text-[#061336] font-medium">
+                    {ord.driver}
+                  </td>
+                  <td className="py-3.5 px-4">
+                    <span
+                      className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] border ${
+                        ord.status === "In transit"
+                          ? "bg-blue-50 text-blue-700 border-blue-200"
+                          : ord.status === "Delivered"
+                          ? "bg-success/15 text-midnight border-success/40"
+                          : ord.status === "Loading"
+                          ? "bg-warning/15 text-midnight border-warning/40"
+                          : "bg-danger/15 text-midnight border-danger/40"
+                      }`}
+                    >
+                      {ord.status}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-4 text-right font-mono text-[#061336]">
+                    {ord.eta}
+                  </td>
+                  <td className="py-3.5 px-4 text-center">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedOrder(ord)}
+                      className="p-1.5 rounded-full text-[#0E2F76] hover:bg-[#dbe9f5] transition-colors"
+                      title="Inspect Order Details"
+                    >
+                      <Eye className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Order Detail Drawer */}
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex justify-end">
+          <div className="w-full max-w-lg bg-[#FFFFFF] h-full p-6 sm:p-8 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
+            <div>
+              <div className="flex items-center justify-between pb-4 border-b border-[#CFDBEE]">
+                <div>
+                  <span className="text-xs font-mono text-[#3F5C96]">Order Manifest</span>
+                  <h2 className="text-xl font-light text-[#061336] tabular-nums">{selectedOrder.id}</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOrder(null)}
+                  className="p-2 rounded-full text-[#3F5C96] hover:bg-[#ffffff]"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-5 text-xs">
+                <div>
+                  <span className="font-mono text-[#3F5C96] uppercase tracking-wider block mb-1">Customer Account</span>
+                  <div className="text-sm font-semibold text-[#061336]">{selectedOrder.customer}</div>
+                </div>
+
+                <div className="p-4 rounded-input bg-[#ffffff] border border-[#CFDBEE] space-y-2">
+                  <div className="flex justify-between">
+                    <span className="text-[#3F5C96]">Cargo Type:</span>
+                    <span className="font-semibold text-[#061336]">{selectedOrder.cargo}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#3F5C96]">Gross Weight:</span>
+                    <span className="font-mono font-semibold text-[#061336]">{selectedOrder.weight}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[#3F5C96]">Assigned Transport:</span>
+                    <span className="font-semibold text-[#0E2F76]">{selectedOrder.driver}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <span className="font-mono text-[#3F5C96] uppercase tracking-wider block mb-2">Routing Journey</span>
+                  <div className="border-l-2 border-[#0E2F76] pl-4 space-y-3">
+                    <div>
+                      <div className="text-[10px] font-mono text-[#3F5C96]">ORIGIN DEPARTURE</div>
+                      <div className="font-semibold text-[#061336]">{selectedOrder.origin}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-mono text-[#3F5C96]">FINAL DESTINATION</div>
+                      <div className="font-semibold text-[#061336]">{selectedOrder.destination}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-6 border-t border-[#CFDBEE] flex items-center justify-between gap-3">
+              <span className="text-xs font-mono text-[#3F5C96]">Estimated: {selectedOrder.eta}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedOrder(null)}
+                className="px-4 py-2 rounded-full bg-[#0E2F76] text-[#FFFFFF] text-xs font-medium"
+              >
+                Close View
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Order Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FFFFFF] w-full max-w-lg rounded-card border border-[#CFDBEE] p-6 ">
+            <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
+              <h3 className="font-light text-base text-[#061336]">Dispatch New Order</h3>
+              <button type="button" onClick={() => setModalOpen(false)} className="text-[#3F5C96]">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="py-4 space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-[#061336] mb-1">Customer Name</label>
+                <input type="text" placeholder="e.g. Samarkand Logistics LLC" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#061336] mb-1">Origin City</label>
+                  <input type="text" placeholder="Tashkent" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#061336] mb-1">Destination City</label>
+                  <input type="text" placeholder="Bukhara" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+                </div>
+              </div>
+              <div>
+                <label className="block font-semibold text-[#061336] mb-1">Cargo Details & Weight (kg)</label>
+                <input type="text" placeholder="Dry Cargo, 12,000 kg" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-3 border-t border-[#CFDBEE]">
+              <button type="button" onClick={() => setModalOpen(false)} className="px-3 py-1.5 rounded-full border border-[#CFDBEE] text-xs font-medium text-[#3F5C96]">
+                Cancel
+              </button>
+              <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-1.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] text-xs font-medium">
+                Confirm & Dispatch
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </AppShell>
+  );
+}
