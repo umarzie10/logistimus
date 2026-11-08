@@ -1,0 +1,114 @@
+# Logistimus backend — local/prod-parity stack.
+# Usage: docker compose up -d db redis minio && uv run manage.py migrate
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-logistimus}
+      POSTGRES_USER: ${POSTGRES_USER:-logistimus}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-logistimus-dev}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-logistimus} -d ${POSTGRES_DB:-logistimus}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-logistimus}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-logistimus-dev}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: .
+    command: uv run uvicorn config.asgi:application --host 0.0.0.0 --port 8000
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-logistimus}:${POSTGRES_PASSWORD:-logistimus-dev}@db:5432/${POSTGRES_DB:-logistimus}
+      REDIS_URL: redis://redis:6379/0
+      CHANNEL_LAYER_URL: redis://redis:6379/1
+      S3_ENDPOINT_URL: http://minio:9000
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app:Z
+      # Container-owned venv: shadows the bind-mounted host .venv so
+      # root `uv run` inside the container never rewrites host files.
+      - venvdata:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker:
+    build: .
+    command: uv run celery -A config worker -l info --concurrency 2
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-logistimus}:${POSTGRES_PASSWORD:-logistimus-dev}@db:5432/${POSTGRES_DB:-logistimus}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - .:/app:Z
+      # Container-owned venv: shadows the bind-mounted host .venv so
+      # root `uv run` inside the container never rewrites host files.
+      - venvdata:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  beat:
+    build: .
+    command: uv run celery -A config beat -l info
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-logistimus}:${POSTGRES_PASSWORD:-logistimus-dev}@db:5432/${POSTGRES_DB:-logistimus}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - .:/app:Z
+      # Container-owned venv: shadows the bind-mounted host .venv so
+      # root `uv run` inside the container never rewrites host files.
+      - venvdata:/app/.venv
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  miniodata:
+  venvdata:

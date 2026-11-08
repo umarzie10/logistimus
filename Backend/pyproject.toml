@@ -1,0 +1,64 @@
+[project]
+name = "logistimus-backend"
+version = "0.1.0"
+description = "Logistimus — Global Logistics Operating System backend (Django modular monolith)"
+requires-python = ">=3.12,<3.14"
+dependencies = [
+    "django>=5.2,<5.3",
+    "djangorestframework>=3.15,<3.16",
+    "django-filter>=24.2",
+    "drf-spectacular>=0.27",
+    "django-cors-headers>=4.4",
+    "django-environ>=0.12",
+    "channels>=4.0",
+    "channels-redis>=4.2",
+    "celery>=5.4",
+    "daphne>=4.0",
+    "redis>=5.0",
+    "psycopg[binary]>=3.2",
+    "djangorestframework-simplejwt>=5.3",
+    "django-storages[boto3]>=1.14",
+    "gunicorn>=22.0",
+    "uvicorn[standard]>=0.30",
+    "whitenoise>=6.7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-django>=4.8",
+    "pytest-cov>=5.0",
+    "factory-boy>=3.3",
+    "faker>=30.0",
+    "freezegun>=1.5",
+    "ruff>=0.6",
+    "pip-audit>=2.7",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["*/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "UP"]
+ignore = ["S101"]  # assert allowed in tests
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106", "S110"]
+# RLS integration tests interpolate fixed identifiers (table/role constants,
+# never user input) into DDL — S608 false positives there.
+"tests/test_rls_postgres.py" = ["S608"]
+# Settings legitimately assign SECRET_KEY (env-driven / test sentinel);
+# S105 would false-positive on every secret assignment here.
+"**/settings/*" = ["S104", "S105"]
+
+[tool.pytest.ini_options]
+DJANGO = "config.settings.test"
+python_files = ["test_*.py"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers --ds=config.settings.test"
+filterwarnings = ["ignore::DeprecationWarning"]

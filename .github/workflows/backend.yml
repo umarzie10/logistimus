@@ -1,0 +1,73 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [main]
+    paths: ["Backend/**", "infrastructure/**", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["Backend/**", "infrastructure/**", ".github/workflows/backend.yml"]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Backend
+
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_DB: logistimus_test
+          POSTGRES_USER: logistimus
+          POSTGRES_PASSWORD: logistimus
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U logistimus -d logistimus_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint (ruff)
+        run: uv run ruff check .
+
+      - name: Django system checks
+        run: uv run manage.py check
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: postgres://logistimus:logistimus@localhost:5432/logistimus_test
+
+      - name: Migrations (must be up to date)
+        run: |
+          uv run manage.py makemigrations --check --dry-run
+          uv run manage.py migrate --noinput
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: postgres://logistimus:logistimus@localhost:5432/logistimus_test
+
+      - name: Database conventions check
+        run: uv run manage.py check_database_conventions
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: postgres://logistimus:logistimus@localhost:5432/logistimus_test
+
+      - name: Tests (pytest)
+        run: uv run pytest --cov=apps --cov-report=term-missing
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings.test
+          SECRET_KEY: ci-secret-key-not-for-production
+          DATABASE_URL: postgres://logistimus:logistimus@localhost:5432/logistimus_test

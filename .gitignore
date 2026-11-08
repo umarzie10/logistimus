@@ -38,3 +38,13 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+
+# Backend (Django/uv)
+Backend/.venv/
+**/__pycache__/
+*.pyc
+Backend/staticfiles/
+Backend/db.sqlite3
+Backend/.pytest_cache/
+Backend/.ruff_cache/
+*.egg-info/
