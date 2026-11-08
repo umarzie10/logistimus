@@ -4,7 +4,6 @@
 [![React](https://img.shields.io/badge/React-19.2.4-blue?style=flat&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?style=flat&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38B2AC?style=flat&logo=tailwind-css)](https://tailwindcss.com/)
-[![Audit Score](https://img.shields.io/badge/Audit_Readiness-98%2F100-success)](./Frontend/docs/frontend-audit/FRONTEND-READINESS.md)
 
 Logistimus is an enterprise freight logistics, corridor dispatch, and warehouse management system (WMS) control plane. Built with Next.js 16 App Router, React 19, and Tailwind CSS v4, adhering strictly to the flat, shadowless **Logistimus Design System (`DESIGN.md`)**.
 
@@ -48,15 +47,11 @@ Logistimus is an enterprise freight logistics, corridor dispatch, and warehouse 
 ```
 Logistimus/
 ├── Frontend/                 # Next.js 16 Application
-│   ├── docs/
-│   │   └── frontend-audit/   # Comprehensive 6-part audit & readiness documentation
 │   ├── public/               # Static assets & 3D vehicle renders
-│   ├── scripts/              # Audit verification & design normalization scripts
 │   ├── src/
 │   │   ├── app/              # Next.js App Router (26 static routes)
 │   │   ├── components/       # Marketing and App Shell components
 │   │   └── lib/              # Client utilities & RFC 4180 CSV export
-│   ├── tests/                # Playwright responsive test suites
 │   ├── DESIGN.md             # Authoritative design system reference
 │   ├── package.json
 │   └── tsconfig.json
@@ -102,24 +97,6 @@ npm run build
 # Start production server
 npm run start
 ```
-
-### Running Automated QA & Playwright Tests
-
-```bash
-node tests/run-audit-qa.js
-```
-
----
-
-## Audit & Verification Reports
-
-Complete production readiness documentation is located in [`Frontend/docs/frontend-audit/`](./Frontend/docs/frontend-audit/):
-1. `PROJECT-INVENTORY.md`: Complete route and component inventory.
-2. `FRONTEND-AUDIT.md`: Design system, accessibility, and token audit.
-3. `ISSUES.md`: Resolved issues register.
-4. `FIX-LOG.md`: Step-by-step modification and hardening log.
-5. `TEST-REPORT.md`: Playwright 95/95 multi-breakpoint test matrix.
-6. `FRONTEND-READINESS.md`: Production readiness assessment & backend API contracts.
 
 ---
 
