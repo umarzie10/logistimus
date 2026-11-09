@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Bell, Menu, Plus, AlertTriangle, CheckCircle2, ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Search, Bell, Menu, Plus, User, LogOut, CheckCircle2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { authApi, UserProfile, OrgProfile } from "@/lib/api";
 
 interface AppHeaderProps {
   onMenuClick?: () => void;
@@ -11,7 +13,41 @@ interface AppHeaderProps {
 }
 
 export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
-  const [notifOpen, setNotifOpen] = useState(false);
+  const router = useRouter();
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [org, setOrg] = useState<OrgProfile | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [systemOk, setSystemOk] = useState(true);
+
+  useEffect(() => {
+    async function loadHeaderSession() {
+      try {
+        const session = await authApi.session();
+        if (session?.user) {
+          setUser(session.user);
+        }
+        if (session?.organization) {
+          setOrg(session.organization);
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    loadHeaderSession();
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await authApi.logout();
+    } finally {
+      router.push("/sign-in");
+    }
+  }
+
+  const initials = user?.first_name
+    ? `${user.first_name[0]}${user.last_name ? user.last_name[0] : ""}`.toUpperCase()
+    : user?.email ? user.email.slice(0, 2).toUpperCase() : "US";
 
   return (
     <header className="h-16 bg-[#FFFFFF] border-b border-[#CFDBEE] px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30">
@@ -38,105 +74,88 @@ export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
             )}
           </div>
         ) : (
-          <div className="relative w-64 sm:w-80 hidden md:block">
-            <Search className="w-4 h-4 text-[#3F5C96] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-            <input
-              type="text"
-              placeholder="Search orders, vehicles, drivers, shipments..."
-              className="w-full pl-9 pr-3 py-1.5 rounded-input bg-[#ffffff] border border-[#CFDBEE] text-xs text-[#061336] placeholder-[#3F5C96] focus:outline-none focus:border-[#0E2F76] transition-colors"
-            />
+          <div>
+            <h1 className="text-base sm:text-lg font-light text-[#061336] leading-tight">
+              {org?.name || "Operations Dashboard"}
+            </h1>
+            <p className="text-xs text-[#3F5C96] hidden sm:block font-mono">
+              Workspace: {org?.slug || "tenant-active"} · Currency: {org?.base_currency || "USD"}
+            </p>
           </div>
         )}
       </div>
 
       {/* Right Controls */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Quick Create Action */}
-        <Link
-          href="/orders?new=true"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] text-xs font-medium hover:bg-[#061336] transition-colors "
-        >
-          <Plus className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">New Order</span>
-        </Link>
-
-        {/* Status indicator */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success/15 border border-success/40 text-[11px] font-mono text-midnight">
-          <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-          Live Network
+        {/* Real System Status */}
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-mono text-emerald-800">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          Network Live
         </div>
 
-        {/* Notifications */}
+        {/* Notifications Link */}
+        <Link
+          href="/notifications"
+          aria-label="View notifications"
+          className="relative p-2 rounded-full text-[#0E2F76] hover:bg-[#F4FEFF] border border-transparent hover:border-[#CFDBEE] transition-colors"
+        >
+          <Bell className="w-4 h-4" />
+        </Link>
+
+        {/* User Account Menu */}
         <div className="relative">
           <button
             type="button"
-            onClick={() => setNotifOpen((v) => !v)}
-            aria-label="View notifications"
-            aria-expanded={notifOpen}
-            className="relative p-2 rounded-full text-[#0E2F76] hover:bg-[#F4FEFF] border border-transparent hover:border-[#CFDBEE] transition-colors"
+            onClick={() => setUserMenuOpen(!userMenuOpen)}
+            className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-[#CFDBEE] text-left cursor-pointer"
           >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-danger ring-2 ring-white" />
+            <div className="w-8 h-8 rounded-full bg-[#0E2F76] text-[#FFFFFF] flex items-center justify-center font-semibold text-xs ring-2 ring-[#A9C0E0]/40">
+              {initials}
+            </div>
+            <div className="hidden sm:block">
+              <div className="text-xs font-semibold text-[#061336] leading-none truncate max-w-[120px]">
+                {user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : (user?.email || "User")}
+              </div>
+              <div className="text-[10px] text-[#3F5C96] font-mono mt-0.5 capitalize">
+                {user?.role || "Member"}
+              </div>
+            </div>
           </button>
 
-          {notifOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 sm:w-96 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] p-4 shadow-none z-50 animate-in fade-in duration-100">
-              <div className="flex items-center justify-between pb-2 border-b border-[#CFDBEE]">
-                <span className="font-semibold text-xs text-[#061336]">Operational Alerts</span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-danger/15 text-midnight">
-                  3 Unread
-                </span>
+          {userMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-56 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] p-2 shadow-sm z-50 animate-in fade-in duration-100 space-y-1">
+              <div className="px-3 py-2 border-b border-[#CFDBEE]/60 text-xs">
+                <div className="font-semibold text-[#061336] truncate">{user?.email}</div>
+                <div className="text-[10px] font-mono text-[#3F5C96] capitalize">Role: {user?.role || "Member"}</div>
               </div>
-              <div className="py-2 space-y-2 text-xs">
-                <div className="p-2.5 rounded-input bg-[#F4FEFF] border border-[#CFDBEE]/70 flex items-start gap-2">
-                  <AlertTriangle className="w-4 h-4 text-warning flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <div className="font-semibold text-[#061336] text-[11px]">
-                      Kamchik Pass Weather Warning
-                    </div>
-                    <div className="text-[10px] text-[#3F5C96]">
-                      Snowfall advisory on M-39 km 140–180. 4 dispatches rerouted.
-                    </div>
-                  </div>
-                </div>
-                <div className="p-2.5 rounded-input bg-white border border-[#CFDBEE]/70 flex items-start gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
-                  <div className="min-w-0">
-                    <div className="font-semibold text-[#061336] text-[11px]">
-                      Order ORD-24102 Delivered
-                    </div>
-                    <div className="text-[10px] text-[#3F5C96]">
-                      E-POD confirmed at Tashkent Medical Center.
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-[#CFDBEE] flex justify-end">
+
+              {user?.platform_role === "platform_admin" && (
                 <Link
-                  href="/notifications"
-                  onClick={() => setNotifOpen(false)}
-                  className="text-xs font-medium text-[#0E2F76] hover:underline flex items-center gap-1"
+                  href="/super-admin"
+                  onClick={() => setUserMenuOpen(false)}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium text-red-700 hover:bg-red-50 transition-colors"
                 >
-                  Notification Center <ArrowRight className="w-3.5 h-3.5" />
+                  <ShieldCheck className="w-3.5 h-3.5" /> Super Admin OS
                 </Link>
-              </div>
+              )}
+
+              <Link
+                href="/settings"
+                onClick={() => setUserMenuOpen(false)}
+                className="flex items-center gap-2 px-3 py-2 rounded-full text-xs text-[#061336] hover:bg-[#F4FEFF] transition-colors"
+              >
+                <User className="w-3.5 h-3.5 text-[#3F5C96]" /> Account & Settings
+              </Link>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-full text-xs text-red-600 hover:bg-red-50 transition-colors text-left"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </button>
             </div>
           )}
-        </div>
-
-        {/* User Account */}
-        <div className="flex items-center gap-2.5 pl-2 sm:pl-3 border-l border-[#CFDBEE]">
-          <div className="w-8 h-8 rounded-full bg-[#0E2F76] text-[#FFFFFF] flex items-center justify-center font-semibold text-xs ring-2 ring-[#A9C0E0]/40">
-            AD
-          </div>
-          <div className="hidden sm:block text-left">
-            <div className="text-xs font-semibold text-[#061336] leading-none">
-              Alisher D.
-            </div>
-            <div className="text-[10px] text-[#3F5C96] font-mono mt-0.5">
-              Operations Director
-            </div>
-          </div>
         </div>
       </div>
     </header>

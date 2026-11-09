@@ -668,9 +668,10 @@ def session_body(
         "organization": organization_payload(org),
         "memberships": memberships_payload(user, org.id),
     }
-    if access is not None:
-        body["access"] = access
-        body["expires_in"] = expires_in
+    if access is None:
+        access, expires_in = issue_access(user, org.id, role)
+    body["access"] = access
+    body["expires_in"] = expires_in
     return body
 
 

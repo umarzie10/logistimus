@@ -113,6 +113,86 @@ export interface LoginHistoryItem {
   created_at: string;
 }
 
+export interface PlatformOverviewResponse {
+  organizations: {
+    total: number;
+    active: number;
+    pending: number;
+  };
+  users: {
+    total: number;
+    verified: number;
+  };
+  infrastructure: {
+    total_branches: number;
+    total_api_keys: number;
+  };
+  system: {
+    version: string;
+    environment: string;
+    database_ok: boolean;
+    redis_ok: boolean;
+  };
+}
+
+export interface PlatformOrgItem {
+  id: string;
+  name: string;
+  slug: string;
+  legal_name: string;
+  base_currency: string;
+  fleet_size_band: string;
+  verification_status: string;
+  is_active: boolean;
+  created_at: string;
+  members_count: number;
+  branches_count: number;
+}
+
+export interface PlatformAuditLogItem {
+  id: string;
+  organization_id: string | null;
+  actor_email: string | null;
+  action: string;
+  object_type: string;
+  object_id: string;
+  created_at: string;
+  ip: string | null;
+}
+
+export interface PlatformSystemHealthResponse {
+  database: {
+    connected: boolean;
+    engine: string;
+    postgis_version: string | null;
+    latency_ms: number;
+  };
+  cache: {
+    connected: boolean;
+    backend: string;
+  };
+}
+
+export interface BranchItem {
+  id: string;
+  name: string;
+  type: string;
+  status: string;
+  is_primary: boolean;
+  address: string;
+}
+
+export interface ApiKeyItem {
+  id: string;
+  name: string;
+  prefix: string;
+  scopes: string[];
+  created_at: string;
+  expires_at: string | null;
+  last_used_at: string | null;
+  revoked: boolean;
+}
+
 export interface PaginatedResponse<T> {
   count: number;
   page: number;
@@ -161,6 +241,32 @@ async function request<T>(
       data = await response.json();
     } catch {
       data = null;
+    }
+  }
+
+  if (response.status === 401 && !path.includes("/auth/")) {
+    // Transparently hydrate access token from HttpOnly refresh cookie
+    try {
+      const sessionUrl = `${API_BASE_URL.replace(/\/$/, "")}/auth/session/`;
+      const sessionRes = await fetch(sessionUrl, {
+        method: "GET",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        credentials: "include",
+      });
+      if (sessionRes.ok) {
+        const sessionData = await sessionRes.json();
+        if (sessionData?.access) {
+          setAccessToken(sessionData.access);
+          headers.set("Authorization", `Bearer ${sessionData.access}`);
+          const retryRes = await fetch(url, { ...options, headers, credentials: "include" });
+          if (retryRes.status === 204) return null as unknown as T;
+          if (retryRes.ok) {
+            return (await retryRes.json()) as T;
+          }
+        }
+      }
+    } catch {
+      // Fall through to error handling
     }
   }
 
@@ -275,5 +381,63 @@ export const authApi = {
 
   async getLoginHistory(page = 1): Promise<PaginatedResponse<LoginHistoryItem>> {
     return api.get<PaginatedResponse<LoginHistoryItem>>(`/auth/login-history/?page=${page}`);
+  },
+};
+
+export const organizationApi = {
+  async getMine(): Promise<{ results: MembershipItem[] }> {
+    return api.get<{ results: MembershipItem[] }>("/organizations/mine/");
+  },
+
+  async getCurrent(): Promise<OrgProfile> {
+    return api.get<OrgProfile>("/organizations/current/");
+  },
+
+  async getBranches(): Promise<{ count: number; results: BranchItem[] }> {
+    return api.get<{ count: number; results: BranchItem[] }>("/organizations/current/branches/");
+  },
+
+  async getMembers(page = 1): Promise<PaginatedResponse<any>> {
+    return api.get<PaginatedResponse<any>>(`/organizations/current/members/?page=${page}`);
+  },
+
+  async getApiKeys(): Promise<{ results: ApiKeyItem[] }> {
+    return api.get<{ results: ApiKeyItem[] }>("/organizations/current/api-keys/");
+  },
+
+  async getSettings(): Promise<Record<string, unknown>> {
+    return api.get<Record<string, unknown>>("/organizations/current/settings/");
+  },
+
+  async updateSettings(data: Record<string, unknown>): Promise<Record<string, unknown>> {
+    return api.patch<Record<string, unknown>>("/organizations/current/settings/", data);
+  },
+};
+
+export const platformApi = {
+  async getOverview(): Promise<PlatformOverviewResponse> {
+    return api.get<PlatformOverviewResponse>("/platform/overview/");
+  },
+
+  async getOrganizations(page = 1): Promise<PaginatedResponse<PlatformOrgItem>> {
+    return api.get<PaginatedResponse<PlatformOrgItem>>(`/platform/organizations/?page=${page}`);
+  },
+
+  async updateOrganization(
+    id: string,
+    data: { is_active?: boolean; verification_status?: string }
+  ): Promise<{ id: string; name: string; is_active: boolean; verification_status: string }> {
+    return api.patch<{ id: string; name: string; is_active: boolean; verification_status: string }>(
+      `/platform/organizations/${id}/`,
+      data
+    );
+  },
+
+  async getAuditLogs(page = 1): Promise<PaginatedResponse<PlatformAuditLogItem>> {
+    return api.get<PaginatedResponse<PlatformAuditLogItem>>(`/platform/audit-logs/?page=${page}`);
+  },
+
+  async getSystemHealth(): Promise<PlatformSystemHealthResponse> {
+    return api.get<PlatformSystemHealthResponse>("/platform/system-health/");
   },
 };

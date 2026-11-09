@@ -9,6 +9,7 @@ import {
   Download,
   Eye,
   X,
+  Package,
 } from "lucide-react";
 
 interface Order {
@@ -24,86 +25,20 @@ interface Order {
   eta: string;
 }
 
-const ORDERS_DATA: Order[] = [
-  {
-    id: "ORD-24101",
-    customer: "Northwind Freight Corp",
-    cargo: "Industrial Electronic Components",
-    weight: "14,200 kg",
-    origin: "Tashkent Central Depot",
-    destination: "Samarkand Regional Hub",
-    driver: "Akmal Saidov (TRK-01)",
-    status: "In transit",
-    created: "Today, 06:30",
-    eta: "Today, 14:30",
-  },
-  {
-    id: "ORD-24102",
-    customer: "Axis Distribution Group",
-    cargo: "Pharmaceuticals & Temperature-Controlled Medicals",
-    weight: "8,500 kg",
-    origin: "Bukhara Cold Facility",
-    destination: "Tashkent Medical Center",
-    driver: "Bobur Turgunov (REEFER-04)",
-    status: "Delivered",
-    created: "Yesterday, 14:00",
-    eta: "Delivered 09:20",
-  },
-  {
-    id: "ORD-24103",
-    customer: "Meridian Cargo LLC",
-    cargo: "Heavy Machined Steel Pipes",
-    weight: "22,400 kg",
-    origin: "Almaty Rail Freight Yard",
-    destination: "Shymkent Terminal",
-    driver: "Sardor Yusupov (FLAT-02)",
-    status: "Loading",
-    created: "Today, 08:15",
-    eta: "Tomorrow, 10:00",
-  },
-  {
-    id: "ORD-24104",
-    customer: "Bluepeak Retail Stores",
-    cargo: "Packaged Fast-Moving Consumer Goods",
-    weight: "11,800 kg",
-    origin: "Fergana Valley Distribution",
-    destination: "Namangan Depot 02",
-    driver: "Davron Karimov (TRK-09)",
-    status: "Delayed",
-    created: "Today, 05:45",
-    eta: "Today, 16:15 (+45m)",
-  },
-  {
-    id: "ORD-24105",
-    customer: "Silk Road Textiles",
-    cargo: "Export Cotton Yarn & Textiles",
-    weight: "18,900 kg",
-    origin: "Andijan Production Unit",
-    destination: "Tashkent International Cargo Terminal",
-    driver: "Jasur Mirzayev (TRK-14)",
-    status: "In transit",
-    created: "Today, 07:10",
-    eta: "Today, 15:45",
-  },
-  {
-    id: "ORD-24106",
-    customer: "Global Agritech Supply",
-    cargo: "Organic Fertilizers & Agro Chemicals",
-    weight: "16,000 kg",
-    origin: "Navoi Free Economic Zone",
-    destination: "Urgench Storage Hub",
-    driver: "Otabek Qodirov (TANK-03)",
-    status: "Loading",
-    created: "Today, 09:00",
-    eta: "Tomorrow, 08:30",
-  },
-];
-
 export default function OrdersPage() {
+  const [orders, setOrders] = useState<Order[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
+
+  // New order form state
+  const [newCustomer, setNewCustomer] = useState("");
+  const [newCargo, setNewCargo] = useState("");
+  const [newWeight, setNewWeight] = useState("");
+  const [newOrigin, setNewOrigin] = useState("");
+  const [newDestination, setNewDestination] = useState("");
+  const [newDriver, setNewDriver] = useState("");
 
   const handleExportCsv = () => {
     const header = [
@@ -134,7 +69,34 @@ export default function OrdersPage() {
     downloadTextFile("orders-export.csv", csv, "text/csv;charset=utf-8");
   };
 
-  const filtered = ORDERS_DATA.filter((o) => {
+  const handleCreateOrder = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCustomer || !newOrigin || !newDestination) return;
+
+    const newOrd: Order = {
+      id: `ORD-${Math.floor(10000 + Math.random() * 90000)}`,
+      customer: newCustomer.trim(),
+      cargo: newCargo.trim() || "General Freight",
+      weight: newWeight.trim() || "10,000 kg",
+      origin: newOrigin.trim(),
+      destination: newDestination.trim(),
+      driver: newDriver.trim() || "Unassigned",
+      status: "Draft",
+      created: "Just now",
+      eta: "Pending Dispatch",
+    };
+
+    setOrders((prev) => [newOrd, ...prev]);
+    setNewCustomer("");
+    setNewCargo("");
+    setNewWeight("");
+    setNewOrigin("");
+    setNewDestination("");
+    setNewDriver("");
+    setModalOpen(false);
+  };
+
+  const filtered = orders.filter((o) => {
     const matchesSearch =
       o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -194,73 +156,94 @@ export default function OrdersPage() {
 
       {/* Orders Table Card */}
       <div className="rounded-card bg-[#FFFFFF] border border-[#CFDBEE] overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-[#CFDBEE] bg-[#ffffff] text-[11px] font-mono uppercase text-[#3F5C96]">
-                <th className="py-3 px-4">Order ID</th>
-                <th className="py-3 px-4">Customer</th>
-                <th className="py-3 px-4">Cargo / Weight</th>
-                <th className="py-3 px-4">Route</th>
-                <th className="py-3 px-4">Assigned Driver</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4 text-right">ETA</th>
-                <th className="py-3 px-4 text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#CFDBEE]/50">
-              {filtered.map((ord) => (
-                <tr key={ord.id} className="hover:bg-[#F4FEFF] transition-colors">
-                  <td className="py-3.5 px-4 font-mono font-semibold text-[#0E2F76]">
-                    {ord.id}
-                  </td>
-                  <td className="py-3.5 px-4 font-semibold text-[#061336]">
-                    {ord.customer}
-                  </td>
-                  <td className="py-3.5 px-4 text-[#3F5C96]">
-                    <div className="truncate max-w-[160px] font-medium text-[#061336]">{ord.cargo}</div>
-                    <div className="font-mono text-[10px] text-[#3F5C96]">{ord.weight}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-[#3F5C96]">
-                    <div className="text-[#061336] font-medium">{ord.origin}</div>
-                    <div className="text-[10px] text-[#3F5C96]">→ {ord.destination}</div>
-                  </td>
-                  <td className="py-3.5 px-4 text-[#061336] font-medium">
-                    {ord.driver}
-                  </td>
-                  <td className="py-3.5 px-4">
-                    <span
-                      className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] border ${
-                        ord.status === "In transit"
-                          ? "bg-blue-50 text-blue-700 border-blue-200"
-                          : ord.status === "Delivered"
-                          ? "bg-success/15 text-midnight border-success/40"
-                          : ord.status === "Loading"
-                          ? "bg-warning/15 text-midnight border-warning/40"
-                          : "bg-danger/15 text-midnight border-danger/40"
-                      }`}
-                    >
-                      {ord.status}
-                    </span>
-                  </td>
-                  <td className="py-3.5 px-4 text-right font-mono text-[#061336]">
-                    {ord.eta}
-                  </td>
-                  <td className="py-3.5 px-4 text-center">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOrder(ord)}
-                      className="p-1.5 rounded-full text-[#0E2F76] hover:bg-[#dbe9f5] transition-colors"
-                      title="Inspect Order Details"
-                    >
-                      <Eye className="w-4 h-4" />
-                    </button>
-                  </td>
+        {filtered.length === 0 ? (
+          <div className="py-16 text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-[#F4FEFF] border border-[#CFDBEE] text-[#0E2F76] flex items-center justify-center mx-auto">
+              <Package className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-light text-[#061336]">No Orders Found in Workspace</h3>
+            <p className="text-xs text-[#3F5C96] max-w-md mx-auto leading-relaxed">
+              No freight consignments have been booked for this organization yet. The core Orders & Shipments REST module is scheduled for Phase 3. You can draft an order below.
+            </p>
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={() => setModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#0E2F76] text-white text-xs font-medium hover:bg-[#061336]"
+              >
+                <Plus className="w-3.5 h-3.5" /> Draft Order Manifest
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="border-b border-[#CFDBEE] bg-[#ffffff] text-[11px] font-mono uppercase text-[#3F5C96]">
+                  <th className="py-3 px-4">Order ID</th>
+                  <th className="py-3 px-4">Customer</th>
+                  <th className="py-3 px-4">Cargo / Weight</th>
+                  <th className="py-3 px-4">Route</th>
+                  <th className="py-3 px-4">Assigned Driver</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">ETA</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-[#CFDBEE]/50">
+                {filtered.map((ord) => (
+                  <tr key={ord.id} className="hover:bg-[#F4FEFF] transition-colors">
+                    <td className="py-3.5 px-4 font-mono font-semibold text-[#0E2F76]">
+                      {ord.id}
+                    </td>
+                    <td className="py-3.5 px-4 font-semibold text-[#061336]">
+                      {ord.customer}
+                    </td>
+                    <td className="py-3.5 px-4 text-[#3F5C96]">
+                      <div className="truncate max-w-[160px] font-medium text-[#061336]">{ord.cargo}</div>
+                      <div className="font-mono text-[10px] text-[#3F5C96]">{ord.weight}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#3F5C96]">
+                      <div className="text-[#061336] font-medium">{ord.origin}</div>
+                      <div className="text-[10px] text-[#3F5C96]">→ {ord.destination}</div>
+                    </td>
+                    <td className="py-3.5 px-4 text-[#061336] font-medium">
+                      {ord.driver}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span
+                        className={`inline-block px-2.5 py-0.5 rounded-full font-semibold text-[10px] border ${
+                          ord.status === "In transit"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : ord.status === "Delivered"
+                            ? "bg-success/15 text-midnight border-success/40"
+                            : ord.status === "Loading"
+                            ? "bg-warning/15 text-midnight border-warning/40"
+                            : "bg-danger/15 text-midnight border-danger/40"
+                        }`}
+                      >
+                        {ord.status}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right font-mono text-[#061336]">
+                      {ord.eta}
+                    </td>
+                    <td className="py-3.5 px-4 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedOrder(ord)}
+                        className="p-1.5 rounded-full text-[#0E2F76] hover:bg-[#dbe9f5] transition-colors"
+                        title="Inspect Order Details"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Order Detail Drawer */}
@@ -336,41 +319,80 @@ export default function OrdersPage() {
       {/* Create Order Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#FFFFFF] w-full max-w-lg rounded-card border border-[#CFDBEE] p-6 ">
+          <div className="bg-[#FFFFFF] w-full max-w-lg rounded-card border border-[#CFDBEE] p-6">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
-              <h3 className="font-light text-base text-[#061336]">Dispatch New Order</h3>
+              <h3 className="font-light text-base text-[#061336]">Draft New Order</h3>
               <button type="button" onClick={() => setModalOpen(false)} className="text-[#3F5C96]">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="py-4 space-y-3 text-xs">
+            <form onSubmit={handleCreateOrder} className="py-4 space-y-3 text-xs">
               <div>
                 <label className="block font-semibold text-[#061336] mb-1">Customer Name</label>
-                <input type="text" placeholder="e.g. Samarkand Logistics LLC" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Samarkand Logistics LLC"
+                  value={newCustomer}
+                  onChange={(e) => setNewCustomer(e.target.value)}
+                  className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]"
+                />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-semibold text-[#061336] mb-1">Origin City</label>
-                  <input type="text" placeholder="Tashkent" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Tashkent"
+                    value={newOrigin}
+                    onChange={(e) => setNewOrigin(e.target.value)}
+                    className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]"
+                  />
                 </div>
                 <div>
                   <label className="block font-semibold text-[#061336] mb-1">Destination City</label>
-                  <input type="text" placeholder="Bukhara" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="Bukhara"
+                    value={newDestination}
+                    onChange={(e) => setNewDestination(e.target.value)}
+                    className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]"
+                  />
                 </div>
               </div>
-              <div>
-                <label className="block font-semibold text-[#061336] mb-1">Cargo Details & Weight (kg)</label>
-                <input type="text" placeholder="Dry Cargo, 12,000 kg" className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-[#061336] mb-1">Cargo Description</label>
+                  <input
+                    type="text"
+                    placeholder="Dry Freight, Consumer Goods"
+                    value={newCargo}
+                    onChange={(e) => setNewCargo(e.target.value)}
+                    className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-[#061336] mb-1">Gross Weight</label>
+                  <input
+                    type="text"
+                    placeholder="12,000 kg"
+                    value={newWeight}
+                    onChange={(e) => setNewWeight(e.target.value)}
+                    className="w-full p-2 rounded-input border border-[#CFDBEE] bg-[#ffffff]"
+                  />
+                </div>
               </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-3 border-t border-[#CFDBEE]">
-              <button type="button" onClick={() => setModalOpen(false)} className="px-3 py-1.5 rounded-full border border-[#CFDBEE] text-xs font-medium text-[#3F5C96]">
-                Cancel
-              </button>
-              <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-1.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] text-xs font-medium">
-                Confirm & Dispatch
-              </button>
-            </div>
+              <div className="flex justify-end gap-2 pt-3 border-t border-[#CFDBEE]">
+                <button type="button" onClick={() => setModalOpen(false)} className="px-3 py-1.5 rounded-full border border-[#CFDBEE] text-xs font-medium text-[#3F5C96]">
+                  Cancel
+                </button>
+                <button type="submit" className="px-4 py-1.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] text-xs font-medium hover:bg-[#061336]">
+                  Save Draft Order
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

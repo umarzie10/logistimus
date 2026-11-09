@@ -1289,6 +1289,244 @@ paths:
                               description:
                                 type: string
           description: ''
+  /api/v1/platform/audit-logs/:
+    get:
+      operationId: platform_audit_logs_retrieve
+      description: Returns system-wide audit logs across platform and all organizations.
+      summary: List Global Audit Logs
+      tags:
+      - Platform Admin
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+                  pages:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        organization_id:
+                          type: string
+                          nullable: true
+                        actor_email:
+                          type: string
+                          nullable: true
+                        action:
+                          type: string
+                        object_type:
+                          type: string
+                        object_id:
+                          type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        ip:
+                          type: string
+                          nullable: true
+          description: ''
+  /api/v1/platform/organizations/:
+    get:
+      operationId: platform_organizations_retrieve
+      description: Returns paginated real tenant organizations.
+      summary: List Platform Organizations
+      tags:
+      - Platform Admin
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+                  pages:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        slug:
+                          type: string
+                        legal_name:
+                          type: string
+                        base_currency:
+                          type: string
+                        fleet_size_band:
+                          type: string
+                        verification_status:
+                          type: string
+                        is_active:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+                        members_count:
+                          type: integer
+                        branches_count:
+                          type: integer
+          description: ''
+  /api/v1/platform/organizations/{id}/:
+    patch:
+      operationId: platform_organizations_partial_update
+      description: Updates tenant active status or verification status.
+      summary: Update Tenant Status
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Platform Admin
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPlatformOrgStatusUpdateRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPlatformOrgStatusUpdateRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPlatformOrgStatusUpdateRequestRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  is_active:
+                    type: boolean
+                  verification_status:
+                    type: string
+          description: ''
+  /api/v1/platform/overview/:
+    get:
+      operationId: platform_overview_retrieve
+      description: Returns aggregate real platform metrics across all organizations.
+      summary: Platform Overview Metrics
+      tags:
+      - Platform Admin
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  organizations:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      active:
+                        type: integer
+                      pending:
+                        type: integer
+                  users:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                      verified:
+                        type: integer
+                  infrastructure:
+                    type: object
+                    properties:
+                      total_branches:
+                        type: integer
+                      total_api_keys:
+                        type: integer
+                  system:
+                    type: object
+                    properties:
+                      version:
+                        type: string
+                      environment:
+                        type: string
+                      database_ok:
+                        type: boolean
+                      redis_ok:
+                        type: boolean
+          description: ''
+  /api/v1/platform/system-health/:
+    get:
+      operationId: platform_system_health_retrieve
+      description: Returns live database, PostGIS extension, and cache telemetry.
+      summary: Platform System Health
+      tags:
+      - Platform Admin
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  database:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                      engine:
+                        type: string
+                      postgis_version:
+                        type: string
+                        nullable: true
+                      latency_ms:
+                        type: integer
+                  cache:
+                    type: object
+                    properties:
+                      connected:
+                        type: boolean
+                      backend:
+                        type: string
+          description: ''
   /api/v1/roles/:
     get:
       operationId: roles_retrieve
@@ -1621,6 +1859,13 @@ components:
           oneOf:
           - $ref: '#/components/schemas/FleetSizeBandEnum'
           - $ref: '#/components/schemas/BlankEnum'
+    PatchedPlatformOrgStatusUpdateRequestRequest:
+      type: object
+      properties:
+        is_active:
+          type: boolean
+        verification_status:
+          $ref: '#/components/schemas/VerificationStatusEnum'
     PatchedRoleUpdateRequest:
       type: object
       properties:
@@ -1666,6 +1911,9 @@ components:
           type: string
         phone:
           type: string
+        acceptTerms:
+          type: boolean
+          default: true
       required:
       - companyName
       - email

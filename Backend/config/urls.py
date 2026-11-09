@@ -7,6 +7,7 @@ from apps.core.errors import handler400, handler403, handler404, handler500
 
 api_v1_patterns = [
     path("health/", include("apps.core.urls")),
+    path("platform/", include("apps.core.platform_urls")),
     path("", include("apps.accounts.urls")),
     path("", include("apps.organizations.urls")),
     path("", include("apps.permissions.urls")),
