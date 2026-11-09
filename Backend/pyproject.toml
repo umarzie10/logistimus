@@ -57,7 +57,6 @@ ignore = ["S101"]  # assert allowed in tests
 "**/settings/*" = ["S104", "S105"]
 
 [tool.pytest.ini_options]
-DJANGO = "config.settings.test"
 python_files = ["test_*.py"]
 testpaths = ["tests"]
 addopts = "-q --strict-markers --ds=config.settings.test"

@@ -23,7 +23,7 @@ class RoleSerializer(serializers.ModelSerializer):
 
     def get_permissions(self, obj: Role) -> list[str]:
         # Prefetched by the view; grant rows are org-scoped like the role.
-        return sorted(rp.permission.code for rp in obj.grants.select_related("permission"))
+        return sorted(rp.permission.code for rp in obj.grants.all())
 
 
 class RoleCreateSerializer(serializers.ModelSerializer):

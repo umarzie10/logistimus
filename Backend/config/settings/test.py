@@ -1,10 +1,11 @@
 """Test settings — fast, isolated, deterministic (SQLite or test Postgres)."""
 
 from .base import *  # noqa: F401,F403
-from .base import env  # noqa: F401
+from .base import SIMPLE_JWT, env  # noqa: F401
 
 DEBUG = False
-SECRET_KEY = "test-secret-key-not-for-production"
+SECRET_KEY = "test-secret-key-not-for-production-at-least-thirty-two-bytes-entropy"
+SIMPLE_JWT = {**SIMPLE_JWT, "SIGNING_KEY": SECRET_KEY}
 
 # Deterministic password hasher for speed (production uses PBKDF2 defaults)
 PASSWORD_HASHERS = ["django.contrib.auth.hashers.MD5PasswordHasher"]

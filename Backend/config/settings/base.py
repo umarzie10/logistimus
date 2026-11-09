@@ -11,10 +11,12 @@ import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent  # .../Backend
 
+DEV_KEY_SENTINEL = "unsafe-dev-key-change-me-thirty-two-bytes-minimum-entropy-fixed!"
+
 env = environ.Env(
     DJANGO_ENV=(str, "development"),
     DEBUG=(bool, True),
-    SECRET_KEY=(str, "unsafe-dev-key-change-me"),
+    SECRET_KEY=(str, DEV_KEY_SENTINEL),
     ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000"]),
     DATABASE_URL=(str, f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
@@ -53,7 +55,7 @@ DEBUG = env("DEBUG")
 SECRET_KEY = env("SECRET_KEY")
 ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
-if not DEBUG and SECRET_KEY == "unsafe-dev-key-change-me":  # pragma: no cover
+if not DEBUG and SECRET_KEY == DEV_KEY_SENTINEL:  # pragma: no cover
     raise RuntimeError("SECRET_KEY must be set to a real value in production")
 
 INSTALLED_APPS = [
