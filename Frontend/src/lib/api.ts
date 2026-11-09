@@ -92,6 +92,7 @@ export interface RegisterRequest {
   full_name?: string;
   phone?: string;
   acceptTerms?: boolean;
+  tier?: string;
 }
 
 export interface RegisterResponse {

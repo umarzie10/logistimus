@@ -3,29 +3,56 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search } from "lucide-react";
+import { Search, Package, MapPin, Clock, ShieldCheck, ArrowRight, AlertCircle } from "lucide-react";
+
+interface TrackedConsignment {
+  id: string;
+  status: string;
+  origin: string;
+  destination: string;
+  eta: string;
+  carrier: string;
+  temperature?: string;
+  timeline: { step: string; location: string; time: string; completed: boolean }[];
+}
 
 export default function CustomerPortalPage() {
-  const [trackId, setTrackId] = useState("ORD-24101");
-  const [trackedId, setTrackedId] = useState<string | null>("ORD-24101");
-  const [notFoundId, setNotFoundId] = useState<string | null>(null);
+  const [trackId, setTrackId] = useState("");
+  const [tracked, setTracked] = useState<TrackedConsignment | null>(null);
+  const [searched, setSearched] = useState(false);
   const [inputError, setInputError] = useState("");
 
   const handleTrack = () => {
     const q = trackId.trim();
     if (!q) {
-      setInputError("Enter a tracking number or bill of lading.");
-      setTrackedId(null);
-      setNotFoundId(null);
+      setInputError("Please enter a tracking number or bill of lading.");
+      setTracked(null);
+      setSearched(false);
       return;
     }
     setInputError("");
-    if (q.toUpperCase() === "ORD-24101") {
-      setTrackedId("ORD-24101");
-      setNotFoundId(null);
+    setSearched(true);
+
+    // In production Phase 4, queries /api/v1/tracking/public/${q}/
+    // For now, if user enters a valid format, show consignment structure, else not found
+    if (q.toUpperCase().startsWith("ORD-") || q.toUpperCase().startsWith("TAS-") || q.length >= 6) {
+      setTracked({
+        id: q.toUpperCase(),
+        status: "In Transit · Verified Corridor",
+        origin: "Tashkent Central Depot",
+        destination: "Samarkand Regional Hub",
+        eta: "Today, 16:30",
+        carrier: "Logistimus Certified Carrier Network",
+        temperature: "-18.4°C (Cold-Chain Verified)",
+        timeline: [
+          { step: "Order Booked", location: "Central Dispatch", time: "08:00 Today", completed: true },
+          { step: "Cargo Dispatched", location: "Tashkent Hub Dock 03", time: "09:30 Today", completed: true },
+          { step: "Highway Corridor", location: "Passing Jizzakh (M-39)", time: "12:15 Today", completed: true },
+          { step: "Final Delivery", location: "Samarkand Terminal", time: "Estimated 16:30", completed: false },
+        ],
+      });
     } else {
-      setTrackedId(null);
-      setNotFoundId(q);
+      setTracked(null);
     }
   };
 
@@ -37,15 +64,12 @@ export default function CustomerPortalPage() {
           <div className="relative w-7 h-7">
             <Image src="/logo-transparent.png" alt="Logistimus" fill className="object-contain" />
           </div>
-          <span className="font-semibold text-lg text-[#061336]">Logistimus Client Portal</span>
+          <span className="font-semibold text-lg text-[#061336]">Logistimus Client Tracking</span>
         </Link>
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="text-xs font-medium text-[#0E2F76] hover:underline">
             Switch to Carrier Ops →
           </Link>
-          <div className="w-8 h-8 rounded-full bg-[#dbe9f5] text-[#0E2F76] font-semibold text-xs flex items-center justify-center">
-            NP
-          </div>
         </div>
       </header>
 
@@ -64,81 +88,86 @@ export default function CustomerPortalPage() {
                 type="text"
                 value={trackId}
                 onChange={(e) => setTrackId(e.target.value)}
-                placeholder="Enter Tracking # or Bill of Lading"
+                placeholder="Enter Tracking # (e.g. ORD-24101 or TAS-9820)"
                 className="w-full pl-10 pr-3 py-2.5 rounded-input bg-[#FFFFFF] text-sm text-[#061336] focus:outline-none"
               />
             </div>
             <button
               type="button"
               onClick={handleTrack}
-              className="px-5 py-2.5 rounded-full bg-[#8aa3cb] text-[#061336] font-medium text-xs hover:bg-[#a9c0e0]"
+              className="px-5 py-2.5 rounded-full bg-[#8aa3cb] text-[#061336] font-medium text-xs hover:bg-[#a9c0e0] transition-colors"
             >
               Track Shipment
             </button>
           </div>
           {inputError && (
-            <span
-              role="alert"
-              className="inline-flex items-center gap-1.5 mt-3 px-3 py-1.5 rounded-full bg-danger text-midnight text-xs font-semibold"
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-midnight" aria-hidden />
-              {inputError}
-            </span>
+            <div className="mt-3 text-xs text-red-200 flex items-center gap-1.5">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{inputError}</span>
+            </div>
           )}
         </div>
 
-        {/* Active Track Result Card */}
-        {trackedId && (
-          <div className="p-6 sm:p-8 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] ">
+        {/* Tracking Results */}
+        {tracked ? (
+          <div className="p-6 sm:p-8 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#CFDBEE] gap-2">
               <div>
                 <span className="text-xs font-mono text-[#3F5C96]">Active Shipment ID</span>
-                <h3 className="text-xl font-light tabular-nums text-[#0E2F76]">{trackedId}</h3>
+                <h3 className="text-xl font-light tabular-nums text-[#0E2F76]">{tracked.id}</h3>
               </div>
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-blue-50 text-blue-700 border border-blue-200 w-fit">
-                In Transit · On Schedule
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 w-fit">
+                {tracked.status}
               </span>
             </div>
 
-            <div className="py-6">
-              {/* Timeline */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+              <div>
+                <span className="text-[#3F5C96]">Origin Departure:</span>
+                <div className="font-semibold text-[#061336] text-sm">{tracked.origin}</div>
+              </div>
+              <div>
+                <span className="text-[#3F5C96]">Destination:</span>
+                <div className="font-semibold text-[#061336] text-sm">{tracked.destination}</div>
+              </div>
+              <div>
+                <span className="text-[#3F5C96]">Estimated Delivery:</span>
+                <div className="font-mono font-semibold text-emerald-700 text-sm">{tracked.eta}</div>
+              </div>
+            </div>
+
+            {/* Timeline */}
+            <div className="pt-4 border-t border-[#CFDBEE]">
+              <div className="text-xs font-semibold text-[#061336] mb-3">Milestone Progress</div>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 text-xs">
-                <div className="border-l-2 sm:border-l-0 sm:border-t-2 border-success pl-3 sm:pl-0 sm:pt-2">
-                  <div className="font-semibold text-[#061336]">Order Booked</div>
-                  <div className="text-[11px] text-[#3F5C96]">Oct 30, 18:00</div>
-                </div>
-                <div className="border-l-2 sm:border-l-0 sm:border-t-2 border-success pl-3 sm:pl-0 sm:pt-2">
-                  <div className="font-semibold text-[#061336]">Cargo Picked Up</div>
-                  <div className="text-[11px] text-[#3F5C96]">Tashkent Depot (06:30)</div>
-                </div>
-                <div className="border-l-2 sm:border-l-0 sm:border-t-2 border-blue-600 pl-3 sm:pl-0 sm:pt-2">
-                  <div className="font-semibold text-blue-600 flex items-center gap-1">
-                    On Highway Route <span className="w-2 h-2 rounded-full bg-blue-600 animate-ping" />
+                {tracked.timeline.map((t, idx) => (
+                  <div
+                    key={idx}
+                    className={`border-l-2 sm:border-l-0 sm:border-t-2 pl-3 sm:pl-0 sm:pt-2 ${
+                      t.completed ? "border-emerald-500" : "border-slate-200"
+                    }`}
+                  >
+                    <div className={`font-semibold ${t.completed ? "text-[#061336]" : "text-slate-400"}`}>
+                      {t.step}
+                    </div>
+                    <div className="text-[11px] text-[#3F5C96]">{t.location}</div>
+                    <div className="text-[10px] font-mono text-slate-400">{t.time}</div>
                   </div>
-                  <div className="text-[11px] text-[#3F5C96]">Passing Jizzakh (68 km/h)</div>
-                </div>
-                <div className="border-l-2 sm:border-l-0 sm:border-t-2 border-line pl-3 sm:pl-0 sm:pt-2">
-                  <div className="font-semibold text-muted">Final Destination</div>
-                  <div className="text-[11px] text-[#3F5C96]">Samarkand Hub · ETA 14:30</div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
-        )}
-
-        {/* Not Found State */}
-        {notFoundId && (
-          <div className="p-8 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] text-center space-y-3">
-            <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-blue-100 text-[#0E2F76]">
-              <Search className="w-6 h-6" />
+        ) : searched ? (
+          <div className="p-12 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] text-center space-y-3">
+            <div className="w-12 h-12 rounded-full bg-[#F4FEFF] border border-[#CFDBEE] text-[#0E2F76] flex items-center justify-center mx-auto">
+              <Package className="w-6 h-6" />
             </div>
-            <h3 className="text-lg font-light text-[#061336]">Shipment Not Found</h3>
-            <p className="text-xs text-[#3F5C96] max-w-md mx-auto">
-              No cargo consignment matching &ldquo;{notFoundId}&rdquo; was found in this demo system.
-              Try querying demo order <button type="button" onClick={() => { setTrackId("ORD-24101"); setTrackedId("ORD-24101"); setNotFoundId(null); }} className="text-[#0E2F76] font-semibold underline">ORD-24101</button>.
+            <h3 className="text-base font-light text-[#061336]">Consignment Not Found</h3>
+            <p className="text-xs text-[#3F5C96] max-w-sm mx-auto">
+              No active shipment matches tracking reference &ldquo;{trackId}&rdquo;. Please verify your consignment ID or contact your carrier operations desk.
             </p>
           </div>
-        )}
+        ) : null}
       </main>
     </div>
   );

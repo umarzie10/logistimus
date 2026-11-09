@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight, Building, Mail, Lock, Phone, User, AlertCircle } from "lucide-react";
 import { authApi, ApiError } from "@/lib/api";
 
-export default function SignUpPage() {
+function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const tier = searchParams.get("tier") || "starter";
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,6 +42,7 @@ export default function SignUpPage() {
         full_name: fullName.trim() || undefined,
         phone: phone.trim() || undefined,
         acceptTerms: true,
+        tier: tier,
       });
 
       router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
@@ -55,7 +59,7 @@ export default function SignUpPage() {
 
   return (
     <div className="min-h-screen bg-[#F4FEFF] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-2xl bg-[#FFFFFF] rounded-card border border-[#CFDBEE] p-8 sm:p-12 ">
+      <div className="mx-auto w-full max-w-2xl bg-[#FFFFFF] rounded-card border border-[#CFDBEE] p-8 sm:p-12">
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
             <div className="relative w-8 h-8">
@@ -74,7 +78,7 @@ export default function SignUpPage() {
             Register Your Logistics Organization
           </h1>
           <p className="text-sm text-[#3F5C96] mt-2">
-            Start your 14-day enterprise workspace trial. No credit card required.
+            Selected Tier: <span className="font-semibold capitalize text-[#061336]">{tier}</span> · 14-day enterprise trial. No credit card required.
           </p>
         </div>
 
@@ -219,7 +223,7 @@ export default function SignUpPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-sm transition-colors flex items-center justify-center gap-2 mt-4"
+            className="w-full py-3 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-sm transition-colors flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
           >
             {loading ? "Creating organization workspace..." : "Create Organization Workspace"}
             {!loading && <ArrowRight className="w-4 h-4" />}
@@ -234,5 +238,13 @@ export default function SignUpPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F4FEFF]" />}>
+      <SignUpForm />
+    </Suspense>
   );
 }

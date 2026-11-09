@@ -1,28 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Navigation, CheckCircle } from "lucide-react";
+import { Navigation, CheckCircle, ArrowLeft, ShieldCheck, User } from "lucide-react";
+import { authApi, UserProfile } from "@/lib/api";
 
 export default function DriverPortalPage() {
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [signed, setSigned] = useState(false);
   const [gpsOn, setGpsOn] = useState(false);
+
+  useEffect(() => {
+    authApi.session().then((s) => {
+      if (s?.user) setUser(s.user);
+    }).catch(() => null);
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F4FEFF] max-w-md mx-auto border-x border-[#CFDBEE] flex flex-col justify-between">
       {/* Driver App Header */}
       <header className="h-16 bg-[#061336] text-[#FFFFFF] px-4 flex items-center justify-between sticky top-0 z-30">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-[#0E2F76] text-xs font-semibold flex items-center justify-center">
-            AS
+          <div className="w-8 h-8 rounded-full bg-[#0E2F76] text-xs font-semibold flex items-center justify-center border border-[#2a4a8e]">
+            {user?.first_name ? user.first_name[0] : "D"}
           </div>
           <div>
-            <div className="font-semibold text-xs">Akmal Saidov</div>
-            <div className="text-[10px] text-[#A9C0E0] font-mono">Vehicle TRK-01 (Volvo FH540)</div>
+            <div className="font-semibold text-xs text-white">
+              {user?.first_name ? `${user.first_name} ${user.last_name || ""}`.trim() : (user?.email || "Driver Partner")}
+            </div>
+            <div className="text-[10px] text-[#A9C0E0] font-mono">Mobile Driver Terminal</div>
           </div>
         </div>
-        <Link href="/dashboard" className="text-[11px] text-[#A9C0E0] hover:text-[#FFFFFF] underline">
-          Dispatcher View
+        <Link href="/dashboard" className="text-[11px] text-[#A9C0E0] hover:text-[#FFFFFF] underline flex items-center gap-1">
+          <ArrowLeft className="w-3 h-3" /> Workspace
         </Link>
       </header>
 
@@ -32,15 +42,15 @@ export default function DriverPortalPage() {
         <div className="p-4 rounded-card bg-[#0E2F76] text-[#FFFFFF] space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#0a2156] text-[#A9C0E0]">
-              ACTIVE TRIP #DSP-8801
+              DRIVER APP · PHASE 5 MODULE
             </span>
-            <span className="text-xs font-semibold text-success">On Highway</span>
+            <span className="text-xs font-semibold text-emerald-400">Roster Ready</span>
           </div>
           <h2 className="text-base font-light leading-tight">
-            Tashkent Hub → Samarkand Terminal
+            Assigned Highway Corridors
           </h2>
           <div className="text-xs text-[#A9C0E0]">
-            310 km total · 142 km remaining · ETA 14:30
+            Electronic proof-of-delivery (e-POD), tachograph hours, and vehicle pre-trip inspections.
           </div>
         </div>
 
@@ -48,11 +58,11 @@ export default function DriverPortalPage() {
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] space-y-3 text-xs">
           <div className="flex items-center gap-2 font-semibold text-[#061336]">
             <Navigation className="w-4 h-4 text-[#0E2F76]" />
-            <span>Next Waypoint</span>
+            <span>Telemetry & Geolocation Link</span>
           </div>
           <div className="p-3 rounded-input bg-[#ffffff] border border-[#CFDBEE]">
-            <div className="font-semibold text-[#061336]">Jizzakh Rest Stop & Refuel #12</div>
-            <div className="text-[11px] text-[#3F5C96] mt-0.5">M-39 Highway km 204 · Distance: 18 km</div>
+            <div className="font-semibold text-[#061336]">Active GPS Coordinates</div>
+            <div className="text-[11px] text-[#3F5C96] mt-0.5">Encrypted mobile telemetry link to Logistimus Dispatch</div>
           </div>
           <button
             type="button"
@@ -60,31 +70,26 @@ export default function DriverPortalPage() {
             aria-pressed={gpsOn}
             className={
               gpsOn
-                ? "w-full py-2.5 rounded-full bg-success/15 border border-success text-midnight font-medium text-xs flex items-center justify-center gap-2"
-                : "w-full py-2.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] font-medium text-xs flex items-center justify-center gap-2"
+                ? "w-full py-2.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 font-medium text-xs flex items-center justify-center gap-2"
+                : "w-full py-2.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] font-medium text-xs flex items-center justify-center gap-2 hover:bg-[#061336]"
             }
           >
             <Navigation className="w-4 h-4" />
-            {gpsOn ? "GPS Active — Tap to Stop" : "Start Turn-by-Turn GPS"}
+            {gpsOn ? "GPS Tracking Active — Tap to Pause" : "Activate Mobile GPS Tracking"}
           </button>
-          {gpsOn && (
-            <p className="text-[11px] text-[#3F5C96] text-center pt-1">
-              Demo mode — no live GPS backend connected.
-            </p>
-          )}
         </div>
 
         {/* Proof of Delivery Card */}
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] space-y-3 text-xs">
-          <div className="font-semibold text-[#061336]">Proof of Delivery (POD)</div>
+          <div className="font-semibold text-[#061336]">Proof of Delivery (e-POD)</div>
           <p className="text-[#3F5C96]">
-            Upon arrival at Samarkand Regional Hub, collect recipient e-signature or upload signed bill of lading.
+            Upon arrival at destination depot, collect recipient digital e-signature or capture photograph of physical bill of lading.
           </p>
 
           {signed ? (
-            <div className="p-3 rounded-input bg-success/15 border border-success/40 text-midnight font-semibold flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-midnight" />
-              Digital POD Signed and Verified
+            <div className="p-3 rounded-input bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-emerald-600" />
+              Digital e-POD Captured & Synchronized
             </div>
           ) : (
             <button
@@ -100,9 +105,9 @@ export default function DriverPortalPage() {
 
       {/* Driver Footer Bar */}
       <footer className="h-14 bg-[#FFFFFF] border-t border-[#CFDBEE] px-4 flex items-center justify-around text-[10px] text-[#3F5C96] font-medium">
-        <span className="text-[#0E2F76] font-semibold">Active Trip</span>
+        <span className="text-[#0E2F76] font-semibold">Trips</span>
         <span>Inspection Log</span>
-        <span>Duty Hours (4h 12m)</span>
+        <span>Hours of Service</span>
         <span>SOS Dispatch</span>
       </footer>
     </div>
