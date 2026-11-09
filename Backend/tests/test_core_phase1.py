@@ -1,4 +1,5 @@
 """Phase 1: health endpoints, error envelope, pagination, request context."""
+
 from __future__ import annotations
 
 import pytest
@@ -90,9 +91,7 @@ class TestPaginationContract:
         from apps.core.models import AuditLog
 
         for i in range(25):
-            AuditLog.objects.create(
-                organization=org, action="test.event", object_id=str(i)
-            )
+            AuditLog.objects.create(organization=org, action="test.event", object_id=str(i))
 
         # exercise StandardPagination directly (unscoped: envelope contract,
         # tenant scoping is covered by TestTenantContextLifecycle)

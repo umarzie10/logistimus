@@ -1,18 +1,30 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Mail, CheckCircle, RefreshCw, ArrowRight } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Mail, CheckCircle, RefreshCw, ArrowRight, AlertCircle } from "lucide-react";
+import { authApi, ApiError } from "@/lib/api";
 
-export default function VerifyEmailPage() {
+function VerifyEmailForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialEmail = searchParams.get("email") || "";
+
+  const [email, setEmail] = useState(initialEmail);
   const [code, setCode] = useState(["", "", "", "", "", ""]);
   const [verified, setVerified] = useState(false);
+  const [verifying, setVerifying] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState("");
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (initialEmail && !email) {
+      setEmail(initialEmail);
+    }
+  }, [initialEmail, email]);
 
   const handleChange = (index: number, val: string) => {
     if (val.length > 1) val = val.slice(-1);
@@ -27,24 +39,53 @@ export default function VerifyEmailPage() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     const entered = code.join("");
+    if (!email) {
+      setError("Please provide your registered work email.");
+      return;
+    }
     if (entered.length < 6) {
       setError("Please enter the complete 6-digit confirmation code.");
       return;
     }
     setError("");
-    setVerified(true);
+    setVerifying(true);
+
+    try {
+      await authApi.verifyEmail(email.trim(), entered);
+      setVerified(true);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message || "Invalid or expired verification code.");
+      } else {
+        setError("Network error while verifying email. Please retry.");
+      }
+    } finally {
+      setVerifying(false);
+    }
   };
 
-  const handleResend = () => {
-    if (resending) return;
+  const handleResend = async () => {
+    if (resending || !email) return;
     setResending(true);
-    setTimeout(() => {
+    setError("");
+
+    try {
+      const res = await authApi.resendVerification(email.trim());
+      setResendNotice(
+        `A fresh verification code has been dispatched. (Cooldown: ${res.cooldown_seconds}s)`
+      );
+      setTimeout(() => setResendNotice(""), 6000);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError("Failed to resend code. Please retry later.");
+      }
+    } finally {
       setResending(false);
-      setResendNotice("A fresh verification code has been dispatched to your email.");
-      setTimeout(() => setResendNotice(""), 4000);
-    }, 600);
+    }
   };
 
   return (
@@ -65,8 +106,8 @@ export default function VerifyEmailPage() {
 
         {verified ? (
           <div className="text-center py-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-success/15 text-midnight flex items-center justify-center mx-auto border border-success/40">
-              <CheckCircle className="w-6 h-6 text-success" />
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
             <h2 className="text-base font-light text-[#061336]">Email Confirmed</h2>
             <p className="text-xs text-[#3F5C96] leading-relaxed">
@@ -75,10 +116,10 @@ export default function VerifyEmailPage() {
             <div className="pt-4">
               <button
                 type="button"
-                onClick={() => router.push("/dashboard")}
+                onClick={() => router.push("/sign-in")}
                 className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] text-xs font-medium hover:bg-[#061336] transition-colors"
               >
-                Go to Dashboard <ArrowRight className="w-3.5 h-3.5" />
+                Sign In to Platform <ArrowRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
@@ -87,20 +128,36 @@ export default function VerifyEmailPage() {
             {error && (
               <div
                 role="alert"
-                className="p-3 rounded-input bg-danger/15 border border-danger/40 text-midnight font-medium"
+                className="p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
               >
-                {error}
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{error}</span>
               </div>
             )}
 
             {resendNotice && (
               <div
                 role="status"
-                className="p-3 rounded-input bg-success/15 border border-success/40 text-midnight font-medium"
+                className="p-3 rounded-input bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-start gap-2.5"
               >
-                {resendNotice}
+                <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                <span>{resendNotice}</span>
               </div>
             )}
+
+            <div>
+              <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-1.5">
+                Work Corporate Email
+              </label>
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                className="w-full px-3 py-2 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+              />
+            </div>
 
             <div>
               <label className="block font-medium text-[#061336] mb-2 text-center">
@@ -124,10 +181,11 @@ export default function VerifyEmailPage() {
 
             <button
               type="button"
+              disabled={verifying}
               onClick={handleVerify}
-              className="w-full py-2.5 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-xs transition-colors"
+              className="w-full py-2.5 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-xs transition-colors disabled:opacity-50"
             >
-              Confirm Authorization
+              {verifying ? "Confirming..." : "Confirm Authorization"}
             </button>
 
             <div className="pt-3 border-t border-[#CFDBEE]/60 flex items-center justify-between text-xs text-[#3F5C96]">
@@ -141,7 +199,7 @@ export default function VerifyEmailPage() {
                 className="font-medium text-[#0E2F76] hover:underline inline-flex items-center gap-1 disabled:opacity-50"
               >
                 <RefreshCw className={`w-3 h-3 ${resending ? "animate-spin" : ""}`} />
-                Resend Code
+                {resending ? "Dispatching..." : "Resend Code"}
               </button>
             </div>
 
@@ -154,5 +212,13 @@ export default function VerifyEmailPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function VerifyEmailPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F4FEFF]" />}>
+      <VerifyEmailForm />
+    </Suspense>
   );
 }

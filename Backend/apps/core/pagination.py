@@ -1,4 +1,5 @@
 """Shared pagination contract (API_SPECIFICATION §1.3)."""
+
 from __future__ import annotations
 
 from rest_framework.pagination import PageNumberPagination

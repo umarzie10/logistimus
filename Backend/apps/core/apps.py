@@ -9,4 +9,7 @@ class CoreConfig(AppConfig):
 
     def ready(self):  # pragma: no cover - imported by Django at startup
         # Register system checks (permission coverage, RLS conventions)
-        from apps.core import checks  # noqa: F401
+        from apps.core import (
+            checks,  # noqa: F401
+            openapi,  # noqa: F401
+        )

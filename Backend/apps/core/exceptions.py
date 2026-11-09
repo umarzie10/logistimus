@@ -7,6 +7,7 @@ Every non-2xx response from /api/v1/ has the shape (API_SPECIFICATION §1.4):
 `code` is machine-readable and stable; `message` is human-readable English.
 No stack traces, SQL, or settings ever reach the client (SECURITY_PLAN §10).
 """
+
 from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
@@ -59,6 +60,9 @@ ERROR_CODES = frozenset(
         "shipment_not_found",
         "last_owner",
         "builtin_role",
+        "role_in_use",
+        "already_member",
+        "invalid_tier",
         "idempotency_conflict",
         "internal_error",
         "method_not_allowed",
@@ -68,9 +72,47 @@ ERROR_CODES = frozenset(
     }
 )
 
+# Code -> HTTP status (docs/backend/API_SPECIFICATION.md §25). Only codes
+# that differ from the default 400 are listed; everything else answers 400.
+STATUS_BY_CODE: dict[str, int] = {
+    # 401
+    "invalid_credentials": status.HTTP_401_UNAUTHORIZED,
+    "refresh_revoked": status.HTTP_401_UNAUTHORIZED,
+    # 403
+    "email_not_verified": status.HTTP_403_FORBIDDEN,
+    "forbidden": status.HTTP_403_FORBIDDEN,
+    "platform_admin_required": status.HTTP_403_FORBIDDEN,
+    "not_a_member": status.HTTP_403_FORBIDDEN,
+    # 404
+    "not_found": status.HTTP_404_NOT_FOUND,
+    # 409
+    "email_exists": status.HTTP_409_CONFLICT,
+    "last_owner": status.HTTP_409_CONFLICT,
+    "builtin_role": status.HTTP_409_CONFLICT,
+    "role_in_use": status.HTTP_409_CONFLICT,
+    "already_member": status.HTTP_409_CONFLICT,
+    "invalid_transition": status.HTTP_409_CONFLICT,
+    "not_archivable": status.HTTP_409_CONFLICT,
+    "ref_exists": status.HTTP_409_CONFLICT,
+    "idempotency_conflict": status.HTTP_409_CONFLICT,
+    # 410
+    "code_expired": status.HTTP_410_GONE,
+    "token_expired": status.HTTP_410_GONE,
+    # 423
+    "account_locked": status.HTTP_423_LOCKED,
+    # 429
+    "too_many_attempts": status.HTTP_429_TOO_MANY_REQUESTS,
+    "rate_limited": status.HTTP_429_TOO_MANY_REQUESTS,
+}
+
 
 class ApiError(exceptions.APIException):
-    """Base error carrying a stable machine code + optional details dict."""
+    """Base error carrying a stable machine code + optional details dict.
+
+    Status code: derived from the code via STATUS_BY_CODE (spec §25) so
+    `email_exists` really answers 409 and `refresh_revoked` really answers
+    401, instead of everything falling back to 400.
+    """
 
     status_code = status.HTTP_400_BAD_REQUEST
     default_code = "validation_error"
@@ -87,6 +129,10 @@ class ApiError(exceptions.APIException):
             raise ValueError(f"Unregistered error code: {code!r}")
         self.code = code
         self.details = details
+        # Subclasses keep their own status (e.g. ServiceUnavailableApiError
+        # -> 503) unless the registry says otherwise for this exact code.
+        if code in STATUS_BY_CODE:
+            self.status_code = STATUS_BY_CODE[code]
         super().__init__(detail or self.default_detail)
 
 
@@ -200,9 +246,11 @@ def api_exception_handler(exc, context) -> Response:
     else:
         code = "validation_error"
 
-    message = _message_of(response.data.get("detail", exc.default_detail)) if isinstance(
-        response.data, dict
-    ) else str(exc)
+    message = (
+        _message_of(response.data.get("detail", exc.default_detail))
+        if isinstance(response.data, dict)
+        else str(exc)
+    )
     details = _details_of(response.data) if isinstance(response.data, dict) else {}
 
     response.data = error_payload(code, message, details)

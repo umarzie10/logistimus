@@ -6,6 +6,7 @@
    manages the request context vars. The *org value* is set later by
    authentication (inside this transaction) via SET LOCAL — see apps.core.db.
 """
+
 from __future__ import annotations
 
 import json
@@ -111,6 +112,7 @@ class TenantContextMiddleware:
             (context.set_user_id(None), context._current_user_id),
             (context.set_org_id(None), context._current_org_id),
             (context.set_platform_admin(False), context._current_platform_admin),
+            (context.set_role(None), context._current_role),
         ]
         try:
             if connection.in_atomic_block or not _db_is_ready():

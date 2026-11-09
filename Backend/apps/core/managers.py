@@ -6,9 +6,10 @@ Design (docs/backend/DATABASE_SCHEMA.md §15, SECURITY_PLAN §3):
   can never set it (serializers keep it read-only AND the ORM overwrites it).
 - Cross-tenant access therefore yields an empty queryset -> API returns 404.
 """
+
 from __future__ import annotations
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from django.db import models
 
@@ -46,12 +47,18 @@ class UnscopedManager(models.Manager):
 
 
 class TenantModel(models.Model):
-    """Base class for every tenant-owned row."""
+    """Base class for every tenant-owned row.
+
+    Primary key: UUID v4 (DATABASE_SCHEMA §1 — externally exposed entities
+    use `id uuid`), so API paths like /roles/{uuid}/ match spec §67.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False, db_index=True)
 
     organization = models.ForeignKey(
         "core.Organization",
         on_delete=models.CASCADE,
-        related_name="%(class)ss",
+        related_name="%(class)s_set",
         db_index=True,
     )
 

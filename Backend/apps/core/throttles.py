@@ -2,6 +2,7 @@
 
 All scopes are Redis-backed via the default cache (dev: Redis container).
 """
+
 from rest_framework.throttling import AnonRateThrottle as BaseAnonRateThrottle
 from rest_framework.throttling import ScopedRateThrottle, UserRateThrottle
 

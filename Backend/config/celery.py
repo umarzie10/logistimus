@@ -1,4 +1,5 @@
 """Celery application for Logistimus background tasks."""
+
 import os
 
 from celery import Celery

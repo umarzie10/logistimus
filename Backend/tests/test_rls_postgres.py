@@ -12,6 +12,7 @@ A scratch table is used because module tables gain RLS in their own
 migrations (Phase 3+); this validates the shared `enable_rls` helper that
 every future migration calls.
 """
+
 from __future__ import annotations
 
 import uuid
@@ -139,8 +140,7 @@ class TestRLSPostgres:
                     with pytest.raises(Exception) as excinfo:
                         with transaction.atomic():
                             cursor.execute(
-                                f"INSERT INTO {TABLE} (organization_id, label) "
-                                "VALUES (%s, %s)",
+                                f"INSERT INTO {TABLE} (organization_id, label) VALUES (%s, %s)",
                                 [org_b, "smuggled"],
                             )
                     assert "row-level security" in str(excinfo.value).lower()

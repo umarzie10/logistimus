@@ -4,21 +4,38 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck } from "lucide-react";
+import { Eye, EyeOff, Lock, Mail, ArrowRight, ShieldCheck, AlertCircle } from "lucide-react";
+import { authApi, ApiError } from "@/lib/api";
 
 export default function SignInPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("alisher@logistimus.com");
-  const [password, setPassword] = useState("••••••••••••");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     setLoading(true);
-    setTimeout(() => {
+
+    try {
+      await authApi.login(email.trim(), password);
       router.push("/dashboard");
-    }, 600);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        if (err.code === "email_not_verified") {
+          router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+          return;
+        }
+        setError(err.message || "Failed to sign in. Please verify your credentials.");
+      } else {
+        setError("Unable to reach backend service. Please check your network.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -49,6 +66,16 @@ export default function SignInPage() {
                 Access your global logistics operating workspace.
               </p>
             </div>
+
+            {error && (
+              <div
+                role="alert"
+                className="mt-6 p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
+              >
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="mt-8 space-y-5">
               <div>

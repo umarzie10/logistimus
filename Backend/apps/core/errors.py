@@ -4,6 +4,7 @@ DRF views produce the envelope via `api_exception_handler`; these cover
 Django-level errors so the API contract (envelope on EVERY non-2xx) holds
 for unknown paths too. No stack traces reach the client (SECURITY_PLAN §10).
 """
+
 from __future__ import annotations
 
 import logging
@@ -16,9 +17,7 @@ logger = logging.getLogger("apps.core")
 
 
 def handler404(request, exception=None):  # noqa: ARG001 - Django signature
-    return JsonResponse(
-        error_payload("not_found", "Resource not found."), status=404
-    )
+    return JsonResponse(error_payload("not_found", "Resource not found."), status=404)
 
 
 def handler403(request, exception=None):  # noqa: ARG001

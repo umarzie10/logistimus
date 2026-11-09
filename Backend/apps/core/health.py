@@ -4,6 +4,7 @@
 `/health/ready/` — DB + Redis reachable (real pings)        → 200/503
 Both are public and unthrottled; they reveal no tenant data.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime
@@ -17,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.core.context import get_request_id
+from apps.core.openapi import STR, extend_schema, obj
 
 
 def _db_ok() -> tuple[bool, str]:
@@ -39,6 +41,20 @@ def _redis_ok() -> tuple[bool, str]:
         return False, exc.__class__.__name__
 
 
+@extend_schema(
+    summary="Liveness check",
+    description="Returns 200 with runtime metadata when the process is up.",
+    responses={
+        200: obj(
+            status=STR,
+            version=STR,
+            environment=STR,
+            time=STR,
+            request_id=STR,
+        )
+    },
+    tags=["System"],
+)
 class HealthView(APIView):
     """Liveness: no auth, no throttle, no DB access."""
 
@@ -58,6 +74,25 @@ class HealthView(APIView):
         )
 
 
+@extend_schema(
+    summary="Readiness check",
+    description="Returns 200 when DB and Redis are reachable, 503 otherwise.",
+    responses={
+        200: obj(
+            status=STR,
+            version=STR,
+            dependencies=obj(database=STR, redis=STR),
+            request_id=STR,
+        ),
+        503: obj(
+            status=STR,
+            version=STR,
+            dependencies=obj(database=STR, redis=STR),
+            request_id=STR,
+        ),
+    },
+    tags=["System"],
+)
 class ReadinessView(APIView):
     """Readiness: real dependency checks — fails closed if anything is down."""
 

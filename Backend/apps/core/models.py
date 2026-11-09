@@ -3,6 +3,7 @@
 `core.User` is the AUTH_USER_MODEL — email is the login identifier and
 platform role is strictly separate from org roles.
 """
+
 from __future__ import annotations
 
 import uuid

@@ -6,6 +6,7 @@
 2. Permission coverage: every API view must declare either `permission_code`
    or explicit `permission_classes` (default-deny discipline, SECURITY_PLAN §2).
 """
+
 from __future__ import annotations
 
 from django.core.checks import Error, Tags, Warning, register
@@ -61,7 +62,7 @@ def permission_coverage_check(app_configs, **kwargs):
                 callback = getattr(pattern.callback, "cls", None)
                 if callback is not None and issubclass(callback, APIView):
                     view = callback
-                    has_code = hasattr(view, "permission_code")
+                    has_code = hasattr(view, "permission_code") or hasattr(view, "permission_codes")
                     has_explicit = "permission_classes" in view.__dict__
                     if not has_code and not has_explicit:
                         warnings.append(

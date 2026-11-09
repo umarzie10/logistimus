@@ -4,6 +4,7 @@ Base settings for Logistimus backend.
 Layering: base <- dev / prod / test (selected via DJANGO_SETTINGS_MODULE).
 Every secret comes from the environment; nothing sensitive lives in this repo.
 """
+
 from pathlib import Path
 
 import environ
@@ -28,6 +29,8 @@ env = environ.Env(
     S3_USE_SSL=(bool, True),
     EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
     DEFAULT_FROM_EMAIL=(str, "Logistimus <no-reply@logistimus.local>"),
+    FRONTEND_URL=(str, "http://localhost:3000"),
+    REFRESH_COOKIE_PATH=(str, "/api/v1/auth/"),
     AI_PROVIDER=(str, ""),
     AI_API_KEY=(str, ""),
     AI_MODEL=(str, ""),
@@ -72,6 +75,9 @@ INSTALLED_APPS = [
     "storages",
     # Local apps
     "apps.core",
+    "apps.permissions",
+    "apps.organizations",
+    "apps.accounts",
 ]
 
 MIDDLEWARE = [
@@ -277,6 +283,9 @@ CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("https:/
 # ---------------------------------------------------------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
+FRONTEND_URL = env("FRONTEND_URL")
+# Refresh cookie is scoped to the auth router only (SECURITY_PLAN §4).
+REFRESH_COOKIE_PATH = env("REFRESH_COOKIE_PATH")
 
 # ---------------------------------------------------------------------------
 # AI abstraction (never fabricated: empty provider => honest 503)

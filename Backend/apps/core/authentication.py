@@ -9,6 +9,7 @@ Contract (docs/backend/API_SPECIFICATION.md §1.2, SECURITY_PLAN §1/§3):
   app.organization_id` inside the request transaction so PostgreSQL RLS
   applies for the rest of the request.
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -58,12 +59,15 @@ class JWTAuthentication(authentication.BaseAuthentication):
                 raise exceptions.AuthenticationFailed("invalid_credentials") from exc
 
         platform_admin = user.is_platform_admin
+        role = token.payload.get("role")
 
         # Bind request context BEFORE the view runs; RLS needs it inside
         # the middleware-opened transaction.
         context.set_user_id(user.id)
         context.set_org_id(org_id)
         context.set_platform_admin(platform_admin)
+        context.set_role(role)
+        db.set_user_context(user.id)
         db.set_organization_context(org_id, platform_admin=platform_admin)
 
         request.auth_token = token

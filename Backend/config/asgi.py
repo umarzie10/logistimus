@@ -1,4 +1,5 @@
 """ASGI entry point — HTTP + WebSocket (Django Channels)."""
+
 import os
 
 from channels.routing import ProtocolTypeRouter, URLRouter

@@ -12,6 +12,7 @@ On non-PostgreSQL backends (SQLite in unit tests) the no-op guard applies:
 tenant isolation there is enforced by TenantManager alone, and the RLS test
 suite only runs against PostgreSQL (see docs/backend/DATABASE_SCHEMA.md §15).
 """
+
 from __future__ import annotations
 
 from uuid import UUID
@@ -29,7 +30,16 @@ def set_organization_context(org_id: UUID | str | None, *, platform_admin: bool 
     Must be called inside an open transaction (`TenantContextMiddleware`),
     otherwise PostgreSQL ignores SET LOCAL — we refuse to run then, because a
     leaked session-level value would break pooling safety.
+
+    The request ContextVar is mirrored here too, so callers (register,
+    background tasks) bind BOTH the ORM scoping and the RLS setting with one
+    call — TenantModel.save() reads the ContextVar, RLS reads the GUC.
     """
+    from apps.core import context  # noqa: PLC0415  (avoid import cycle)
+
+    context.set_org_id(UUID(str(org_id)) if org_id is not None else None)
+    context.set_platform_admin(platform_admin)
+
     if not _vendor_is_postgres():
         return
     if not connection.in_atomic_block:  # pragma: no cover - defensive
@@ -43,23 +53,58 @@ def set_organization_context(org_id: UUID | str | None, *, platform_admin: bool 
         if org_id is None:
             cursor.execute("SELECT set_config(%s, %s, true)", ["app.organization_id", ""])
         else:
-            cursor.execute(
-                "SELECT set_config(%s, %s, true)", ["app.organization_id", str(org_id)]
-            )
+            cursor.execute("SELECT set_config(%s, %s, true)", ["app.organization_id", str(org_id)])
 
 
 def clear_organization_context() -> None:
     set_organization_context(None)
 
 
-def enable_rls(table: str, policy_name: str, *, force: bool = True) -> str:
+def set_user_context(user_id: UUID | str | None) -> None:
+    """SET LOCAL the acting user id — lets RLS policies grant a user read
+    access to *their own* rows across organizations (login, session,
+    switch-organization) without ever opening a cross-tenant write path.
+
+    Same transaction discipline as `set_organization_context`.
+    """
+    if not _vendor_is_postgres():
+        return
+    if not connection.in_atomic_block:  # pragma: no cover - defensive
+        raise RuntimeError("set_user_context() requires an open transaction")
+
+    with connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT set_config(%s, %s, true)",
+            [
+                "app.user_id",
+                "" if user_id is None else str(user_id),
+            ],
+        )
+
+
+def enable_rls(
+    table: str,
+    policy_name: str,
+    *,
+    force: bool = True,
+    user_column: str | None = None,
+) -> str:
     """SQL for a migration: enable RLS + tenant isolation policy.
 
     NULLIF guards the empty string written by `clear_organization_context()`:
     casting '' to uuid would abort the transaction instead of failing closed.
     Unset/empty context → NULL → predicate NULL → no rows (fail closed).
+
+    `user_column`: for identity tables that carry a `user_id` (memberships),
+    the owner of the row may always READ it — that is what makes login,
+    /auth/session and switch-organization work before an org context exists.
+    Writes still require a matching org context (WITH CHECK is unchanged),
+    so a user can never insert rows into an arbitrary organization.
     """
     force_clause = "FORCE " if force else ""
+    user_clause = ""
+    if user_column:
+        user_clause = f" OR {user_column} = NULLIF(current_setting('app.user_id', true), '')::uuid"
     return f"""
     ALTER TABLE {table} ENABLE ROW LEVEL SECURITY;
     ALTER TABLE {table} {force_clause}ROW LEVEL SECURITY;
@@ -67,10 +112,11 @@ def enable_rls(table: str, policy_name: str, *, force: bool = True) -> str:
     CREATE POLICY {policy_name} ON {table}
         USING (
             organization_id = NULLIF(current_setting('app.organization_id', true), '')::uuid
-            OR current_setting('app.platform_admin', true) = 'on'
+            OR current_setting('app.platform_admin', true) = 'on'{user_clause}
         )
         WITH CHECK (
             organization_id = NULLIF(current_setting('app.organization_id', true), '')::uuid
+            OR current_setting('app.platform_admin', true) = 'on'
         );
     """
 

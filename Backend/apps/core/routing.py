@@ -1,4 +1,5 @@
 """WebSocket routes (mounted at /ws/ by config.asgi)."""
+
 from django.urls import path
 
 from apps.core.consumers import PingConsumer

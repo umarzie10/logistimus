@@ -1,4 +1,5 @@
 """Development settings — local docker compose (PostGIS, Redis, MinIO)."""
+
 from .base import *  # noqa: F401,F403
 from .base import ALLOWED_HOSTS, env  # noqa: F401
 

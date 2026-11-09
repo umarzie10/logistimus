@@ -1,0 +1,1856 @@
+openapi: 3.0.3
+info:
+  title: Logistimus API
+  version: v1
+  description: Logistimus — Global Logistics Operating System. Multi-tenant REST API.
+    All tenant data is scoped to the organization in your access token; no client-supplied
+    organization id is ever trusted.
+paths:
+  /api/v1/auth/change-password/:
+    post:
+      operationId: auth_change_password_create
+      description: Changes password for authenticated user and revokes other sessions.
+      summary: Change password
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  changed:
+                    type: boolean
+                  other_sessions_revoked:
+                    type: integer
+          description: ''
+  /api/v1/auth/forgot-password/:
+    post:
+      operationId: auth_forgot_password_create
+      description: Initiates password reset email flow. Always returns 202 to prevent
+        user enumeration.
+      summary: Request password reset
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cooldown_seconds:
+                    type: integer
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: auth_login_create
+      description: Authenticates credentials, sets HttpOnly refresh cookie, and returns
+        access token.
+      summary: User sign-in
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/LoginRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                  expires_in:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                        nullable: true
+                      platform_role:
+                        type: string
+                        nullable: true
+                      email_verified_at:
+                        type: string
+                        nullable: true
+                        format: date-time
+                  organization:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                      base_currency:
+                        type: string
+                  memberships:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        organization_id:
+                          type: string
+                        organization_name:
+                          type: string
+                        role:
+                          type: string
+                        is_current:
+                          type: boolean
+          description: ''
+  /api/v1/auth/login-history/:
+    get:
+      operationId: auth_login_history_retrieve
+      description: Returns paginated login attempts for the authenticated user.
+      summary: Get login history
+      tags:
+      - Auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+                  pages:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        ip:
+                          type: string
+                          nullable: true
+                        user_agent:
+                          type: string
+                          nullable: true
+                        successful:
+                          type: boolean
+                        created_at:
+                          type: string
+                          format: date-time
+          description: ''
+  /api/v1/auth/logout/:
+    post:
+      operationId: auth_logout_create
+      description: Revokes the refresh token family and clears the HttpOnly cookie.
+      summary: Sign out
+      tags:
+      - Auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/me/permissions/:
+    get:
+      operationId: auth_me_permissions_retrieve
+      description: |-
+        Effective permission codes for (user, current org) — UI gating only.
+
+        The server always re-checks the same set on every endpoint; this just
+        lets the frontend hide what would 403.
+      summary: Get caller's effective permissions
+      tags:
+      - Permissions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  role:
+                    type: string
+                    nullable: true
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+          description: ''
+  /api/v1/auth/refresh/:
+    post:
+      operationId: auth_refresh_create
+      description: Rotates HttpOnly refresh cookie with reuse detection and issues
+        new access token.
+      summary: Rotate refresh token
+      tags:
+      - Auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                  expires_in:
+                    type: integer
+          description: ''
+  /api/v1/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Creates a new user, organization, and owner membership. Triggers
+        verification email.
+      summary: Register account and organization
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RegisterRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verification_required:
+                    type: boolean
+                  email:
+                    type: string
+                  cooldown_seconds:
+                    type: integer
+          description: ''
+  /api/v1/auth/resend-verification/:
+    post:
+      operationId: auth_resend_verification_create
+      description: Generates a new verification code if cooldown has expired (60s).
+        Always returns 202.
+      summary: Resend verification email
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResendVerificationRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cooldown_seconds:
+                    type: integer
+          description: ''
+  /api/v1/auth/reset-password/:
+    post:
+      operationId: auth_reset_password_create
+      description: Resets user password using the token sent via email and revokes
+        all active sessions.
+      summary: Reset password with token
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reset:
+                    type: boolean
+                  sessions_revoked:
+                    type: integer
+          description: ''
+  /api/v1/auth/session/:
+    get:
+      operationId: auth_session_retrieve
+      description: Returns user and organization profile from the HttpOnly refresh
+        cookie. Reissues access token if near expiry.
+      summary: Get current session
+      tags:
+      - Auth
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                        nullable: true
+                      platform_role:
+                        type: string
+                        nullable: true
+                      email_verified_at:
+                        type: string
+                        nullable: true
+                        format: date-time
+                  organization:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                      base_currency:
+                        type: string
+                  memberships:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        organization_id:
+                          type: string
+                        organization_name:
+                          type: string
+                        role:
+                          type: string
+                        is_current:
+                          type: boolean
+                  access:
+                    type: string
+                    nullable: true
+                  expires_in:
+                    type: string
+                    nullable: true
+          description: ''
+  /api/v1/auth/switch-organization/:
+    post:
+      operationId: auth_switch_organization_create
+      description: Switches the user's active tenant, rotating the refresh family
+        and returning a new access token.
+      summary: Switch active organization
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SwitchOrganizationRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SwitchOrganizationRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SwitchOrganizationRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access:
+                    type: string
+                  expires_in:
+                    type: integer
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      first_name:
+                        type: string
+                      last_name:
+                        type: string
+                      email:
+                        type: string
+                      role:
+                        type: string
+                        nullable: true
+                      platform_role:
+                        type: string
+                        nullable: true
+                      email_verified_at:
+                        type: string
+                        nullable: true
+                        format: date-time
+                  organization:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      slug:
+                        type: string
+                      base_currency:
+                        type: string
+                  memberships:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        organization_id:
+                          type: string
+                        organization_name:
+                          type: string
+                        role:
+                          type: string
+                        is_current:
+                          type: boolean
+          description: ''
+  /api/v1/auth/verify-email/:
+    post:
+      operationId: auth_verify_email_create
+      description: Submits the 6-digit verification code. Activates user and confirms
+        pending invites.
+      summary: Verify email address
+      tags:
+      - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequestRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  verified:
+                    type: boolean
+                  joined_organizations:
+                    type: array
+                    items:
+                      type: string
+          description: ''
+  /api/v1/health/:
+    get:
+      operationId: health_retrieve
+      description: Returns 200 with runtime metadata when the process is up.
+      summary: Liveness check
+      tags:
+      - System
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  version:
+                    type: string
+                  environment:
+                    type: string
+                  time:
+                    type: string
+                  request_id:
+                    type: string
+          description: ''
+  /api/v1/health/ready/:
+    get:
+      operationId: health_ready_retrieve
+      description: Returns 200 when DB and Redis are reachable, 503 otherwise.
+      summary: Readiness check
+      tags:
+      - System
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  version:
+                    type: string
+                  dependencies:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                      redis:
+                        type: string
+                  request_id:
+                    type: string
+          description: ''
+        '503':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                  version:
+                    type: string
+                  dependencies:
+                    type: object
+                    properties:
+                      database:
+                        type: string
+                      redis:
+                        type: string
+                  request_id:
+                    type: string
+          description: ''
+  /api/v1/organizations/current/:
+    get:
+      operationId: organizations_current_retrieve
+      description: GET (Member) / PATCH (Role:owner/admin) /organizations/current/.
+      summary: Get current organization details
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: ''
+    patch:
+      operationId: organizations_current_partial_update
+      description: GET (Member) / PATCH (Role:owner/admin) /organizations/current/.
+      summary: Update current organization profile
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrganizationRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrganizationRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrganizationRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+          description: ''
+  /api/v1/organizations/current/api-keys/:
+    get:
+      operationId: organizations_current_api_keys_retrieve
+      description: GET list / POST create — secret returned exactly once on create.
+      summary: List API keys
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        name:
+                          type: string
+                        prefix:
+                          type: string
+                        scopes:
+                          type: array
+                          items:
+                            type: string
+                        created_at:
+                          type: string
+                          format: date-time
+                        expires_at:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        last_used_at:
+                          type: string
+                          nullable: true
+                          format: date-time
+                        revoked:
+                          type: boolean
+          description: ''
+    post:
+      operationId: organizations_current_api_keys_create
+      description: GET list / POST create — secret returned exactly once on create.
+      summary: Create an API key
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ApiKeyCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  prefix:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  expires_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  last_used_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  revoked:
+                    type: boolean
+                  secret:
+                    type: string
+          description: ''
+  /api/v1/organizations/current/api-keys/{id}/:
+    delete:
+      operationId: organizations_current_api_keys_destroy
+      description: DELETE /organizations/current/api-keys/{id}/ -> 204 (revoke).
+      summary: Revoke an API key
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/organizations/current/api-keys/{id}/rotate/:
+    post:
+      operationId: organizations_current_api_keys_rotate_create
+      description: POST /organizations/current/api-keys/{id}/rotate/ — new secret
+        once.
+      summary: Rotate an API key
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  name:
+                    type: string
+                  prefix:
+                    type: string
+                  scopes:
+                    type: array
+                    items:
+                      type: string
+                  created_at:
+                    type: string
+                    format: date-time
+                  expires_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  last_used_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  revoked:
+                    type: boolean
+                  secret:
+                    type: string
+          description: ''
+  /api/v1/organizations/current/branches/:
+    get:
+      operationId: organizations_current_branches_retrieve
+      description: |-
+        GET (Member) list / POST (Role:admin) create — spec returns a plain
+        `{count, results}` envelope, not the paginated one.
+      summary: List organization branches
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BranchListResponse'
+          description: ''
+    post:
+      operationId: organizations_current_branches_create
+      description: |-
+        GET (Member) list / POST (Role:admin) create — spec returns a plain
+        `{count, results}` envelope, not the paginated one.
+      summary: Create a new branch
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BranchRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+          description: ''
+  /api/v1/organizations/current/branches/{id}/:
+    patch:
+      operationId: organizations_current_branches_partial_update
+      description: PATCH /organizations/current/branches/{id}/ (Role:admin).
+      summary: Update a branch
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBranchRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBranchRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBranchRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Branch'
+          description: ''
+  /api/v1/organizations/current/invitations/:
+    post:
+      operationId: organizations_current_invitations_create
+      description: POST /organizations/current/invitations/ (Role:admin).
+      summary: Invite a new member
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvitationCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/InvitationCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/InvitationCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+                  accepted_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  created_at:
+                    type: string
+                    format: date-time
+          description: ''
+        '201':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  email:
+                    type: string
+                  role:
+                    type: string
+                  expires_at:
+                    type: string
+                    format: date-time
+                  accepted_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+                  created_at:
+                    type: string
+                    format: date-time
+          description: ''
+  /api/v1/organizations/current/invitations/{id}/:
+    delete:
+      operationId: organizations_current_invitations_destroy
+      description: DELETE /organizations/current/invitations/{id}/ -> 204.
+      summary: Revoke an invitation
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/organizations/current/invitations/{id}/resend/:
+    post:
+      operationId: organizations_current_invitations_resend_create
+      description: POST /organizations/current/invitations/{id}/resend/ -> 202.
+      summary: Resend invitation email
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '202':
+          description: No response body
+  /api/v1/organizations/current/members/:
+    get:
+      operationId: organizations_current_members_retrieve
+      description: GET /organizations/current/members/?page=&role= (Role:admin).
+      summary: List organization members
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                  page:
+                    type: integer
+                  page_size:
+                    type: integer
+                  pages:
+                    type: integer
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        user:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            name:
+                              type: string
+                            email:
+                              type: string
+                        role:
+                          type: string
+                        status:
+                          type: string
+                        last_login_at:
+                          type: string
+                          nullable: true
+                          format: date-time
+          description: ''
+  /api/v1/organizations/current/members/{user_id}/:
+    patch:
+      operationId: organizations_current_members_partial_update
+      description: |-
+        PATCH change role (Role:owner) / DELETE remove (Role:owner)
+        — both on /organizations/current/members/{user_id}/ per spec §4.
+      summary: Update a member's role
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedMemberRoleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedMemberRoleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedMemberRoleRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      email:
+                        type: string
+                  role:
+                    type: string
+                  status:
+                    type: string
+                  last_login_at:
+                    type: string
+                    nullable: true
+                    format: date-time
+          description: ''
+    delete:
+      operationId: organizations_current_members_destroy
+      description: |-
+        PATCH change role (Role:owner) / DELETE remove (Role:owner)
+        — both on /organizations/current/members/{user_id}/ per spec §4.
+      summary: Remove a member from the organization
+      parameters:
+      - in: path
+        name: user_id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/organizations/current/settings/:
+    get:
+      operationId: organizations_current_settings_retrieve
+      description: GET (Member) / PATCH (Role:admin) — /organizations/current/settings/.
+      summary: Get organization settings
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+          description: ''
+    patch:
+      operationId: organizations_current_settings_partial_update
+      description: GET (Member) / PATCH (Role:admin) — /organizations/current/settings/.
+      summary: Update organization settings
+      tags:
+      - Organizations
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSettingsRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSettingsRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSettingsRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Settings'
+          description: ''
+  /api/v1/organizations/mine/:
+    get:
+      operationId: organizations_mine_retrieve
+      description: GET /organizations/mine/ — workspaces for the sidebar.
+      summary: List current user's organizations
+      tags:
+      - Organizations
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        organization_id:
+                          type: string
+                        organization_name:
+                          type: string
+                        slug:
+                          type: string
+                        role:
+                          type: string
+                        is_current:
+                          type: boolean
+          description: ''
+  /api/v1/permissions/:
+    get:
+      operationId: permissions_retrieve
+      description: Full catalog grouped by module — any authenticated member.
+      summary: List permission catalog grouped by module
+      tags:
+      - Permissions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        module:
+                          type: string
+                        label:
+                          type: string
+                        permissions:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              code:
+                                type: string
+                              object:
+                                type: string
+                              action:
+                                type: string
+                              description:
+                                type: string
+          description: ''
+  /api/v1/roles/:
+    get:
+      operationId: roles_retrieve
+      description: GET org roles (built-in + custom) / POST create a custom role.
+      summary: List roles in organization
+      tags:
+      - Permissions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoleListResponse'
+          description: ''
+    post:
+      operationId: roles_create
+      description: GET org roles (built-in + custom) / POST create a custom role.
+      summary: Create a custom role
+      tags:
+      - Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleCreateRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+  /api/v1/roles/{id}/:
+    patch:
+      operationId: roles_partial_update
+      description: PATCH update / DELETE remove a custom role (built-ins undeletable).
+      summary: Update a custom role
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Permissions
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRoleUpdateRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRoleUpdateRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRoleUpdateRequest'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+    delete:
+      operationId: roles_destroy
+      description: PATCH update / DELETE remove a custom role (built-ins undeletable).
+      summary: Delete a custom role
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        required: true
+      tags:
+      - Permissions
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    ApiKeyCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        scopes:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+        expires_in_days:
+          type: integer
+          maximum: 3650
+          minimum: 1
+          nullable: true
+      required:
+      - name
+    BlankEnum:
+      enum:
+      - ''
+    Branch:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        type:
+          type: string
+          maxLength: 32
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        is_primary:
+          type: boolean
+        address:
+          type: string
+          maxLength: 255
+      required:
+      - id
+      - name
+    BranchListResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Branch'
+      required:
+      - count
+      - results
+    BranchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          minLength: 1
+          maxLength: 32
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        is_primary:
+          type: boolean
+        address:
+          type: string
+          maxLength: 255
+      required:
+      - name
+    ChangePasswordRequestRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          minLength: 1
+        new_password:
+          type: string
+          minLength: 1
+      required:
+      - current_password
+      - new_password
+    FleetSizeBandEnum:
+      enum:
+      - 10-50
+      - 50-200
+      - 200-1000
+      - 1000+
+      type: string
+      description: |-
+        * `10-50` - 10 – 50 Vehicles
+        * `50-200` - 50 – 200 Vehicles
+        * `200-1000` - 200 – 1,000 Vehicles
+        * `1000+` - 1,000+ Vehicles
+    ForgotPasswordRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    InvitationCreateRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        role:
+          type: string
+          minLength: 1
+          maxLength: 64
+      required:
+      - email
+      - role
+    LoginRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - password
+    Organization:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          readOnly: true
+          pattern: ^[-a-zA-Z0-9_]+$
+        legal_name:
+          type: string
+          maxLength: 200
+        tax_id:
+          type: string
+          maxLength: 64
+        headquarters_address:
+          type: string
+          maxLength: 300
+        base_currency:
+          type: string
+          maxLength: 3
+        verification_status:
+          allOf:
+          - $ref: '#/components/schemas/VerificationStatusEnum'
+          readOnly: true
+        fleet_size_band:
+          oneOf:
+          - $ref: '#/components/schemas/FleetSizeBandEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - name
+      - slug
+      - verification_status
+    PatchedBranchRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        type:
+          type: string
+          minLength: 1
+          maxLength: 32
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        is_primary:
+          type: boolean
+        address:
+          type: string
+          maxLength: 255
+    PatchedMemberRoleRequest:
+      type: object
+      properties:
+        role:
+          type: string
+          minLength: 1
+          maxLength: 64
+    PatchedOrganizationRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        legal_name:
+          type: string
+          maxLength: 200
+        tax_id:
+          type: string
+          maxLength: 64
+        headquarters_address:
+          type: string
+          maxLength: 300
+        base_currency:
+          type: string
+          minLength: 1
+          maxLength: 3
+        fleet_size_band:
+          oneOf:
+          - $ref: '#/components/schemas/FleetSizeBandEnum'
+          - $ref: '#/components/schemas/BlankEnum'
+    PatchedRoleUpdateRequest:
+      type: object
+      properties:
+        label:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 255
+        permissions:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+    PatchedSettingsRequest:
+      type: object
+      properties:
+        distance_unit:
+          type: string
+          minLength: 1
+          maxLength: 4
+        date_format:
+          type: string
+          minLength: 1
+          maxLength: 32
+        feature_flags: {}
+        notification_preferences: {}
+    RegisterRequestRequest:
+      type: object
+      properties:
+        companyName:
+          type: string
+          minLength: 1
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        full_name:
+          type: string
+        phone:
+          type: string
+      required:
+      - companyName
+      - email
+      - password
+    ResendVerificationRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    ResetPasswordRequestRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+      required:
+      - password
+      - token
+    Role:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 64
+        label:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 255
+        is_builtin:
+          type: boolean
+          readOnly: true
+        permissions:
+          type: array
+          items:
+            type: string
+          readOnly: true
+      required:
+      - id
+      - is_builtin
+      - name
+      - permissions
+    RoleCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 64
+        label:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 255
+        permissions:
+          type: array
+          items:
+            type: string
+            minLength: 1
+            maxLength: 100
+      required:
+      - name
+    RoleListResponse:
+      type: object
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
+      required:
+      - results
+    Settings:
+      type: object
+      properties:
+        distance_unit:
+          type: string
+          maxLength: 4
+        date_format:
+          type: string
+          maxLength: 32
+        feature_flags: {}
+        notification_preferences: {}
+    StatusEnum:
+      enum:
+      - active
+      - inactive
+      type: string
+      description: |-
+        * `active` - Active
+        * `inactive` - Inactive
+    SwitchOrganizationRequestRequest:
+      type: object
+      properties:
+        organization_id:
+          type: string
+          format: uuid
+      required:
+      - organization_id
+    VerificationStatusEnum:
+      enum:
+      - pending
+      - verified
+      - rejected
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `verified` - Verified
+        * `rejected` - Rejected
+    VerifyEmailRequestRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+      required:
+      - code
+      - email
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      description: 15-minute JWT access token (kept in memory by the SPA).
+tags:
+- name: auth
+  description: Registration, login, sessions
+- name: organizations
+  description: Companies, branches, members, API keys
+- name: orders
+  description: Order lifecycle
+- name: shipments
+  description: Transport legs, tracking, public track
+- name: dispatch
+  description: Dispatch board and assignments
+- name: fleet
+  description: Vehicles, telemetry, maintenance, fuel
+- name: drivers
+  description: Driver profiles, duty logs, performance
+- name: warehouses
+  description: Warehouses and dock bays
+- name: inventory
+  description: Items, stock levels, movements
+- name: crm
+  description: Customers, contracts, leads
+- name: finance
+  description: Invoices, payments, expenses
+- name: documents
+  description: Uploads, signed URLs
+- name: tracking
+  description: GPS, live locations
+- name: analytics
+  description: KPIs and reports
+- name: notifications
+  description: In-app notifications
+- name: ai
+  description: AI assistant abstraction
+- name: integrations
+  description: Webhooks, API keys, providers
+- name: subscriptions
+  description: Plans and entitlements
+- name: customer-portal
+  description: Customer-facing portal
+- name: driver-portal
+  description: Driver-facing portal
+- name: super-admin
+  description: Platform administration
+- name: health
+  description: Liveness and readiness

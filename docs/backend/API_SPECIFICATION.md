@@ -543,7 +543,7 @@ Backed by Redis scopes (`django-ratelimit` or DRF throttle classes), `429` with 
 
 ## 25. Error code registry (stable)
 
-`validation_error` · `invalid_credentials` · `email_not_verified` · `email_exists` · `weak_password` · `terms_required` · `account_locked` · `too_many_attempts` · `rate_limited` · `invalid_code` · `code_expired` · `token_expired` · `token_invalid` · `refresh_revoked` · `not_a_member` · `forbidden` · `platform_admin_required` · `not_found` · `invalid_transition` · `not_archivable` · `ref_exists` · `driver_unavailable` · `vehicle_unavailable` · `insufficient_stock` · `sku_not_found` · `negative_total` · `file_too_large` · `invalid_file_type` · `plan_limit_reached` · `plan_expired` · `payment_required` · `provider_unavailable` · `ai_unavailable` · `no_telemetry` · `no_active_trip` · `shipment_not_found` · `last_owner` · `builtin_role` · `idempotency_conflict`
+`validation_error` · `invalid_credentials` · `email_not_verified` · `email_exists` · `weak_password` · `terms_required` · `account_locked` · `too_many_attempts` · `rate_limited` · `invalid_code` · `code_expired` · `token_expired` · `token_invalid` · `refresh_revoked` · `not_a_member` · `forbidden` · `platform_admin_required` · `not_found` · `invalid_transition` · `not_archivable` · `ref_exists` · `driver_unavailable` · `vehicle_unavailable` · `insufficient_stock` · `sku_not_found` · `negative_total` · `file_too_large` · `invalid_file_type` · `plan_limit_reached` · `plan_expired` · `payment_required` · `provider_unavailable` · `ai_unavailable` · `no_telemetry` · `no_active_trip` · `shipment_not_found` · `last_owner` · `builtin_role` · `role_in_use` · `already_member` · `invalid_tier` · `idempotency_conflict`
 
 ---
 

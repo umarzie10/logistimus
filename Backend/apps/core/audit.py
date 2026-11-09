@@ -4,6 +4,7 @@ SECURITY_PLAN §9 lists which actions must be audited. Callers pass explicit
 `action` strings; keep them stable and lowercase (e.g. `auth.login`,
 `org.member.role_changed`, `invoice.voided`).
 """
+
 from __future__ import annotations
 
 import logging
@@ -65,7 +66,5 @@ def record(
             request_id=context.get_request_id() or "",
         )
     except Exception:  # noqa: BLE001 - audit must not cascade-fail requests
-        logger.exception(
-            "audit_write_failed", extra={"action": action, "object_type": object_type}
-        )
+        logger.exception("audit_write_failed", extra={"action": action, "object_type": object_type})
         return None

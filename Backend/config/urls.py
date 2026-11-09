@@ -1,4 +1,5 @@
 """Root URL configuration — every application endpoint lives under /api/v1/."""
+
 from django.urls import include, path
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 
@@ -6,6 +7,9 @@ from apps.core.errors import handler400, handler403, handler404, handler500
 
 api_v1_patterns = [
     path("health/", include("apps.core.urls")),
+    path("", include("apps.accounts.urls")),
+    path("", include("apps.organizations.urls")),
+    path("", include("apps.permissions.urls")),
 ]
 
 urlpatterns = [

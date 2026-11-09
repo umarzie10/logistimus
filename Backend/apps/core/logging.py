@@ -1,4 +1,5 @@
 """Structured JSON logging with request_id correlation (SECURITY_PLAN §17)."""
+
 from __future__ import annotations
 
 import json

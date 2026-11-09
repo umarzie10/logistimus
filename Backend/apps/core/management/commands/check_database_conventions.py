@@ -9,6 +9,7 @@ Verifies on PostgreSQL:
 On SQLite (unit-test runs) the command reports SKIPPED for pg-only rules so
 local workflows stay usable; CI runs it against the PostGIS container.
 """
+
 from __future__ import annotations
 
 from django.core.management.base import BaseCommand, CommandError

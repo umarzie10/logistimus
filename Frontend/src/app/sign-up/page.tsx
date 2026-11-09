@@ -4,18 +4,52 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowRight, Building, Mail, Lock, Phone, User } from "lucide-react";
+import { ArrowRight, Building, Mail, Lock, Phone, User, AlertCircle } from "lucide-react";
+import { authApi, ApiError } from "@/lib/api";
 
 export default function SignUpPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [companyName, setCompanyName] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [fleetSize, setFleetSize] = useState("10 – 50 Vehicles");
+  const [terms, setTerms] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!terms) {
+      setError("You must agree to the Master Service Agreement and Privacy Policy.");
+      return;
+    }
+
     setLoading(true);
-    setTimeout(() => {
-      router.push("/dashboard");
-    }, 600);
+
+    try {
+      await authApi.register({
+        companyName: companyName.trim(),
+        email: email.trim(),
+        password,
+        full_name: fullName.trim() || undefined,
+        phone: phone.trim() || undefined,
+      });
+
+      router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message || "Failed to register organization.");
+      } else {
+        setError("Unable to reach backend service. Please check your network.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -43,6 +77,16 @@ export default function SignUpPage() {
           </p>
         </div>
 
+        {error && (
+          <div
+            role="alert"
+            className="mb-6 p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
+          >
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -54,6 +98,8 @@ export default function SignUpPage() {
                 <input
                   type="text"
                   required
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="e.g. TransAsia Logistics LLC"
                   className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
                 />
@@ -64,7 +110,11 @@ export default function SignUpPage() {
               <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
                 Fleet Size
               </label>
-              <select className="w-full px-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]">
+              <select
+                value={fleetSize}
+                onChange={(e) => setFleetSize(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+              >
                 <option>10 – 50 Vehicles</option>
                 <option>50 – 200 Vehicles</option>
                 <option>200 – 1,000 Vehicles</option>
@@ -83,6 +133,8 @@ export default function SignUpPage() {
                 <input
                   type="text"
                   required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                   placeholder="Alisher Davronov"
                   className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
                 />
@@ -98,6 +150,8 @@ export default function SignUpPage() {
                 <input
                   type="tel"
                   required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
                   placeholder="+998 90 123 45 67"
                   className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
                 />
@@ -114,6 +168,8 @@ export default function SignUpPage() {
               <input
                 type="email"
                 required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
                 className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
               />
@@ -129,6 +185,8 @@ export default function SignUpPage() {
               <input
                 type="password"
                 required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 placeholder="Minimum 8 characters with numbers"
                 className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
               />
@@ -140,6 +198,8 @@ export default function SignUpPage() {
               type="checkbox"
               required
               id="terms"
+              checked={terms}
+              onChange={(e) => setTerms(e.target.checked)}
               className="mt-0.5 rounded-full border-[#CFDBEE] text-[#0E2F76] focus:ring-[#0E2F76]"
             />
             <label htmlFor="terms" className="text-xs text-[#3F5C96]">

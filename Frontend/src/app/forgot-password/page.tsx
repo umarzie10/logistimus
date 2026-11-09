@@ -3,15 +3,34 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, Mail, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail, CheckCircle, AlertCircle } from "lucide-react";
+import { authApi, ApiError } from "@/lib/api";
 
 export default function ForgotPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitted(true);
+    if (!email.trim()) return;
+
+    setError(null);
+    setLoading(true);
+
+    try {
+      await authApi.forgotPassword(email.trim());
+      setSubmitted(true);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message || "Unable to send recovery instructions.");
+      } else {
+        setError("Network error. Please check your connection and retry.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -30,14 +49,24 @@ export default function ForgotPasswordPage() {
           </p>
         </div>
 
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
+          >
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <span>{error}</span>
+          </div>
+        )}
+
         {submitted ? (
           <div className="text-center py-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-success/15 text-midnight flex items-center justify-center mx-auto">
-              <CheckCircle className="w-6 h-6" />
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
             <h3 className="text-base font-light text-[#061336]">Recovery Email Dispatched</h3>
             <p className="text-xs text-[#3F5C96] leading-relaxed">
-              We have sent a one-time secure password reset link to <strong className="text-[#061336]">{email}</strong>.
+              If an active account exists for <strong className="text-[#061336]">{email}</strong>, we have dispatched a secure password reset link.
             </p>
             <div className="pt-4">
               <Link
@@ -69,9 +98,10 @@ export default function ForgotPasswordPage() {
 
             <button
               type="submit"
-              className="w-full py-2.5 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-sm transition-colors mt-2"
+              disabled={loading}
+              className="w-full py-2.5 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-sm transition-colors mt-2 disabled:opacity-50"
             >
-              Send Recovery Link
+              {loading ? "Sending..." : "Send Recovery Link"}
             </button>
 
             <div className="text-center pt-4">

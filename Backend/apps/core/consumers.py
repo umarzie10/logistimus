@@ -12,6 +12,7 @@ Base class implements the contract from API_SPECIFICATION §23:
 (tracking, dispatch, notifications, orders) join in Phases 3/6 and reuse
 `OrgScopedConsumer.join_org_group()`.
 """
+
 from __future__ import annotations
 
 from datetime import UTC, datetime

@@ -1,4 +1,5 @@
 """core URL routes — mounted under /api/v1/health/ by config.urls."""
+
 from django.urls import path
 
 from apps.core import health

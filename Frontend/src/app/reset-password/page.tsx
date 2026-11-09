@@ -1,21 +1,36 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, Suspense, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { Lock, CheckCircle, ArrowRight } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Lock, Key, CheckCircle, ArrowRight, AlertCircle } from "lucide-react";
+import { authApi, ApiError } from "@/lib/api";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryToken = searchParams.get("token") || "";
+
+  const [token, setToken] = useState(queryToken);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent) => {
+  useEffect(() => {
+    if (queryToken && !token) {
+      setToken(queryToken);
+    }
+  }, [queryToken, token]);
+
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!token.trim()) {
+      setError("Reset token is missing. Please check your reset link.");
+      return;
+    }
     if (!password || !confirmPassword) {
       setError("Please fill in all password fields.");
       return;
@@ -31,10 +46,19 @@ export default function ResetPasswordPage() {
 
     setError("");
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      await authApi.resetPassword(token.trim(), password);
       setSuccess(true);
-    }, 600);
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setError(err.message || "Failed to reset password. Link may be expired.");
+      } else {
+        setError("Network error. Please try again.");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,12 +79,12 @@ export default function ResetPasswordPage() {
 
         {success ? (
           <div className="text-center py-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-success/15 text-midnight flex items-center justify-center mx-auto border border-success/40">
-              <CheckCircle className="w-6 h-6 text-success" />
+            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200">
+              <CheckCircle className="w-6 h-6 text-emerald-600" />
             </div>
             <h2 className="text-base font-light text-[#061336]">Password Updated Successfully</h2>
             <p className="text-xs text-[#3F5C96] leading-relaxed">
-              Your password has been changed. You can now access your carrier and operations workspace.
+              Your password has been changed and all prior sessions revoked. You can now access your workspace.
             </p>
             <div className="pt-4">
               <button
@@ -77,9 +101,27 @@ export default function ResetPasswordPage() {
             {error && (
               <div
                 role="alert"
-                className="p-3 rounded-input bg-danger/15 border border-danger/40 text-midnight font-medium"
+                className="p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
               >
-                {error}
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            {!queryToken && (
+              <div>
+                <label className="block font-medium text-[#061336] mb-1">Reset Token</label>
+                <div className="relative">
+                  <Key className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    required
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="Enter reset token from email"
+                    className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+                  />
+                </div>
               </div>
             )}
 
@@ -89,6 +131,7 @@ export default function ResetPasswordPage() {
                 <Lock className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="password"
+                  required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="At least 8 characters"
@@ -103,6 +146,7 @@ export default function ResetPasswordPage() {
                 <Lock className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 <input
                   type="password"
+                  required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Re-enter password"
@@ -128,5 +172,13 @@ export default function ResetPasswordPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#F4FEFF]" />}>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
