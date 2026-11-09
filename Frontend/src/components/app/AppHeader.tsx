@@ -131,11 +131,11 @@ export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
 
               {user?.platform_role === "platform_admin" && (
                 <Link
-                  href="/super-admin"
+                  href="/admin"
                   onClick={() => setUserMenuOpen(false)}
                   className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium text-red-700 hover:bg-red-50 transition-colors"
                 >
-                  <ShieldCheck className="w-3.5 h-3.5" /> Super Admin OS
+                  <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
                 </Link>
               )}
 

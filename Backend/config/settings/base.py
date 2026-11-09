@@ -359,7 +359,7 @@ SPECTACULAR_SETTINGS = {
         {"name": "subscriptions", "description": "Plans and entitlements"},
         {"name": "customer-portal", "description": "Customer-facing portal"},
         {"name": "driver-portal", "description": "Driver-facing portal"},
-        {"name": "super-admin", "description": "Platform administration"},
+        {"name": "Platform Admin", "description": "Platform administration"},
         {"name": "health", "description": "Liveness and readiness"},
     ],
 }

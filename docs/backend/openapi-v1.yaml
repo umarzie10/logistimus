@@ -2098,7 +2098,7 @@ tags:
   description: Customer-facing portal
 - name: driver-portal
   description: Driver-facing portal
-- name: super-admin
+- name: Platform Admin
   description: Platform administration
 - name: health
   description: Liveness and readiness

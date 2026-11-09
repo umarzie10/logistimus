@@ -50,11 +50,11 @@ PostgreSQL 16 Row Level Security (RLS) policy:
 
 ---
 
-## 3. Platform Administration (Super Admin) Isolation
+## 3. Platform Administration (Admin Panel) Isolation
 
-- **Role Gate:** `User.PlatformRole.PLATFORM_ADMIN` required. Organization roles (`owner`, `admin`, `dispatcher`) never grant access to `/super-admin/*` or `/api/v1/platform/*`.
+- **Role Gate:** `User.PlatformRole.PLATFORM_ADMIN` required. Organization roles (`owner`, `admin`, `dispatcher`) never grant access to `/admin/*` or `/api/v1/platform/*`.
 - **Backend Enforcement:** All `/api/v1/platform/*` endpoints protected with `IsPlatformAdmin`.
-- **Frontend Route Protection:** Non-platform admins attempting to access `/super-admin` are greeted with a secure "Access Restricted" screen.
+- **Frontend Route Protection:** Non-platform admins attempting to access `/admin` are greeted with a secure "Access Restricted" screen.
 - **Penetration Test:** Organization Owner token accessing `/api/v1/platform/overview/` -> **HTTP 403 Forbidden (`platform_admin_required`)**.
 
 ---

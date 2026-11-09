@@ -54,7 +54,7 @@
 - `GET /api/v1/health/ready/` — Readiness probe (DB + Redis real health pings).
 - `/ws/ping/` — Authenticated WebSocket handshake with 30s heartbeats.
 
-### Platform Super Admin (`/api/v1/platform/*`) — Gated by `IsPlatformAdmin`
+### Platform Admin Panel (`/api/v1/platform/*`) — Gated by `IsPlatformAdmin`
 - `GET /api/v1/platform/overview/` — Global tenant counts, verified user counts, system health.
 - `GET /api/v1/platform/organizations/` — Paginated tenant organizations.
 - `PATCH /api/v1/platform/organizations/<id>/` — Suspend/Activate and verify tenant.

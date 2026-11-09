@@ -35,11 +35,10 @@
 | `/settings` | Config | `AppShell` (Workspace) | `/current/`, `/branches/`, `/api-keys/` | ✅ Production Live |
 | `/portal` | Standalone | Client Portal Header | Public Tracking Corridor Engine | ✅ Standalone Portal |
 | `/driver` | Standalone | Mobile Driver Shell | Driver Terminal & Geolocation Link | ✅ Standalone Driver App |
-| `/admin` | Redirect | Standalone | Redirects to `/super-admin` | ✅ Enforced Redirect |
-| `/super-admin` | Platform | Super Admin Shell | `GET /api/v1/platform/overview/` | ✅ Protected Super Admin |
-| `/super-admin/organizations` | Platform | Super Admin Shell | `GET/PATCH /api/v1/platform/organizations/` | ✅ Protected Super Admin |
-| `/super-admin/audit` | Platform | Super Admin Shell | `GET /api/v1/platform/audit-logs/` | ✅ Protected Super Admin |
-| `/super-admin/system`| Platform | Super Admin Shell | `GET /api/v1/platform/system-health/` | ✅ Protected Super Admin |
+| `/admin` | Platform | Admin Shell | `GET /api/v1/platform/overview/` (legacy `/super-admin` redirects here) | ✅ Protected Admin |
+| `/admin/organizations` | Platform | Admin Shell | `GET/PATCH /api/v1/platform/organizations/` | ✅ Protected Admin |
+| `/admin/audit` | Platform | Admin Shell | `GET /api/v1/platform/audit-logs/` | ✅ Protected Admin |
+| `/admin/system`| Platform | Admin Shell | `GET /api/v1/platform/system-health/` | ✅ Protected Admin |
 
 ---
 
@@ -57,11 +56,11 @@
 - **Endpoints:**
   - `GET /api/v1/health/` (Liveness)
   - `GET /api/v1/health/ready/` (Readiness: DB + Redis)
-  - `GET /api/v1/platform/overview/` (Super Admin KPIs)
-  - `GET /api/v1/platform/organizations/` (Super Admin Tenant List)
-  - `PATCH /api/v1/platform/organizations/<id>/` (Super Admin Tenant Status)
-  - `GET /api/v1/platform/audit-logs/` (Super Admin System Audit Trail)
-  - `GET /api/v1/platform/system-health/` (Super Admin PostGIS & DB Telemetry)
+  - `GET /api/v1/platform/overview/` (Admin Panel KPIs)
+  - `GET /api/v1/platform/organizations/` (Admin Panel Tenant List)
+  - `PATCH /api/v1/platform/organizations/<id>/` (Admin Panel Tenant Status)
+  - `GET /api/v1/platform/audit-logs/` (Admin Panel System Audit Trail)
+  - `GET /api/v1/platform/system-health/` (Admin Panel PostGIS & DB Telemetry)
   - `/ws/ping/` (Channels WebSocket consumer)
 
 ### 2. `apps.accounts`

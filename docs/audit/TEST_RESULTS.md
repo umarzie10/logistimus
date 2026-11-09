@@ -21,7 +21,7 @@
 | `tests/test_api_contracts_qa.py` | REST endpoint contracts, status codes, OpenAPI 3.0 | 12 | 12 | 0 | ✅ PASS |
 | `tests/test_channels_celery_qa.py`| WebSocket /ws/ping/ handshake, Celery async emails | 6 | 6 | 0 | ✅ PASS |
 | `tests/test_performance_e2e_qa.py`| O(1) query bounds, N+1 prevention, full onboarding | 3 | 3 | 0 | ✅ PASS |
-| `tests/test_platform_admin_qa.py`| Super Admin authorization, tenant suspension, telemetry | 5 | 5 | 0 | ✅ PASS |
+| `tests/test_platform_admin_qa.py`| Admin Panel authorization, tenant suspension, telemetry | 5 | 5 | 0 | ✅ PASS |
 | **TOTAL** | **Complete Backend Test Suite** | **130** | **130** | **0** | **✅ 100% PASS** |
 
 ---
@@ -60,9 +60,9 @@ cd Frontend && npm run build
    - Email verification: 6-digit PIN submitted on `/verify-email`.
    - Sign in: Logged in on `/sign-in`.
    - Result: Successful redirect to `/dashboard`.
-2. **Super Admin Authorization Verification:**
-   - Tenant user accessing `/super-admin`: Received **Access Restricted (403)**.
-   - Platform admin accessing `/super-admin`: Received **Platform Control Plane**, live tenant list, and real PostGIS telemetry.
+2. **Admin Panel Authorization Verification:**
+   - Tenant user accessing `/admin`: Received **Access Restricted (403)**.
+   - Platform admin accessing `/admin`: Received **Platform Control Plane**, live tenant list, and real PostGIS telemetry.
    - Tenant status toggle: Successfully suspended and activated tenant organization with immediate UI updates.
 3. **Workspace Data Cleanliness Verification:**
    - Verified that `/dashboard` contains 0 fake orders, 0 fake trucks, and reflects real organization identity.

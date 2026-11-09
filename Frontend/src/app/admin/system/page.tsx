@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Server, Activity, Database, Cpu, CheckCircle2, RefreshCw } from "lucide-react";
 import { platformApi, PlatformSystemHealthResponse, ApiError } from "@/lib/api";
 
-export default function SuperAdminSystemPage() {
+export default function AdminSystemPage() {
   const [loading, setLoading] = useState(true);
   const [health, setHealth] = useState<PlatformSystemHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);

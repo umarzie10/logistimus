@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { FileText, RefreshCw, Shield } from "lucide-react";
 import { platformApi, PlatformAuditLogItem, ApiError } from "@/lib/api";
 
-export default function SuperAdminAuditPage() {
+export default function AdminAuditPage() {
   const [loading, setLoading] = useState(true);
   const [logs, setLogs] = useState<PlatformAuditLogItem[]>([]);
   const [error, setError] = useState<string | null>(null);

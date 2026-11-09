@@ -18,13 +18,13 @@ import {
 import { authApi, UserProfile } from "@/lib/api";
 
 const SUPERADMIN_NAV = [
-  { name: "Platform Overview", href: "/super-admin", icon: Sliders },
-  { name: "Tenant Organizations", href: "/super-admin/organizations", icon: Building },
-  { name: "Global Audit Logs", href: "/super-admin/audit", icon: FileText },
-  { name: "System Health & PostGIS", href: "/super-admin/system", icon: Server },
+  { name: "Platform Overview", href: "/admin", icon: Sliders },
+  { name: "Tenant Organizations", href: "/admin/organizations", icon: Building },
+  { name: "Global Audit Logs", href: "/admin/audit", icon: FileText },
+  { name: "System Health & PostGIS", href: "/admin/system", icon: Server },
 ];
 
-export default function SuperAdminLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -98,7 +98,7 @@ export default function SuperAdminLayout({ children }: { children: ReactNode }) 
 
   return (
     <div className="min-h-screen bg-[#040C24] text-white flex flex-col">
-      {/* Super Admin Global Header */}
+      {/* Admin Global Header */}
       <header className="h-16 border-b border-[#1c356b] bg-[#061336] px-6 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <Link href="/" className="flex items-center gap-2.5">
@@ -106,11 +106,11 @@ export default function SuperAdminLayout({ children }: { children: ReactNode }) 
               <Image src="/logo-transparent.png" alt="Logistimus" fill className="object-contain" />
             </div>
             <span className="font-semibold text-base tracking-tight text-white">
-              Logistimus <span className="font-light text-[#A9C0E0]">SuperAdmin</span>
+              Logistimus <span className="font-light text-[#A9C0E0]">Admin</span>
             </span>
           </Link>
           <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-950/60 text-red-400 font-semibold border border-red-500/40">
-            ROOT LEVEL
+            ADMIN
           </span>
         </div>
 

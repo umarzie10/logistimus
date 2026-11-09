@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { Building, RefreshCw, CheckCircle, XCircle } from "lucide-react";
 import { platformApi, PlatformOrgItem, ApiError } from "@/lib/api";
 
-export default function SuperAdminOrganizationsPage() {
+export default function AdminOrganizationsPage() {
   const [loading, setLoading] = useState(true);
   const [orgs, setOrgs] = useState<PlatformOrgItem[]>([]);
   const [error, setError] = useState<string | null>(null);

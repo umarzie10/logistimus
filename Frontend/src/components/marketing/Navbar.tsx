@@ -259,7 +259,7 @@ export function Navbar() {
                   onClick={() => setMobileOpen(false)}
                   className="px-3 py-1.5 rounded-full border border-line bg-white text-xs text-royal font-medium"
                 >
-                  Super Admin
+                  Admin Panel
                 </Link>
               </div>
             </div>

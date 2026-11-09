@@ -34,10 +34,10 @@
 | **Company Settings** (`/settings`) | Company profile, branch, API keys | `/current/`, `/branches/`, `/api-keys/`| Live real-time database mutations | Clean form cards with action buttons | ✅ PASS |
 | **Customer Portal** (`/portal`) | Standalone public tracking bar | Tracking Engine (Phase 4) | "Consignment Not Found" on invalid ID | Centered responsive layout | ✅ PASS |
 | **Driver Mobile App** (`/driver`) | Mobile handset viewport simulator | Active user session | Clean trip banner, e-POD signature pad | Mobile max-w-md centered container | ✅ PASS |
-| **Super Admin Overview** (`/super-admin`)| Root-level dark control plane | `GET /api/v1/platform/overview/` | Real tenant count, real system health | Responsive grid & tenant table | ✅ PASS |
-| **Super Admin Orgs** (`/super-admin/orgs`)| Tenant management table | `GET/PATCH /api/v1/platform/organizations/`| Live Suspend / Activate toggles | Responsive table with status buttons | ✅ PASS |
-| **Super Admin Audit** (`/super-admin/audit`)| Global immutable audit log | `GET /api/v1/platform/audit-logs/` | Real database logs with timestamps & IPs | Responsive table with mono timestamps | ✅ PASS |
-| **Super Admin System** (`/super-admin/system`)| Database & PostGIS telemetry | `GET /api/v1/platform/system-health/` | Real latency ms & PostGIS 3.4 version | 2-column grid cards | ✅ PASS |
+| **Admin Panel Overview** (`/admin`)| Root-level dark control plane | `GET /api/v1/platform/overview/` | Real tenant count, real system health | Responsive grid & tenant table | ✅ PASS |
+| **Admin Panel Orgs** (`/admin/organizations`)| Tenant management table | `GET/PATCH /api/v1/platform/organizations/`| Live Suspend / Activate toggles | Responsive table with status buttons | ✅ PASS |
+| **Admin Panel Audit** (`/admin/audit`)| Global immutable audit log | `GET /api/v1/platform/audit-logs/` | Real database logs with timestamps & IPs | Responsive table with mono timestamps | ✅ PASS |
+| **Admin Panel System** (`/admin/system`)| Database & PostGIS telemetry | `GET /api/v1/platform/system-health/` | Real latency ms & PostGIS 3.4 version | 2-column grid cards | ✅ PASS |
 
 ---
 
