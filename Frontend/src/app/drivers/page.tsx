@@ -69,8 +69,8 @@ export default function DriversPage() {
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Safety Compliance</div>
-          <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">100%</div>
-          <div className="text-xs text-emerald-700 mt-0.5 font-medium">Verified Valid</div>
+          <div className="text-2xl font-light tabular-nums text-royal mt-1">100%</div>
+          <div className="text-xs text-muted mt-0.5 font-medium">Verified Valid</div>
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Duty Logbook</div>
@@ -120,7 +120,7 @@ export default function DriversPage() {
                   <h3 className="font-semibold text-sm text-[#061336]">{d.name}</h3>
                   <div className="text-xs font-mono text-[#3F5C96]">{d.id} · {d.experience}</div>
                 </div>
-                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-success text-midnight border border-success">
                   {d.status}
                 </span>
               </div>
@@ -140,7 +140,7 @@ export default function DriversPage() {
                 </div>
                 <div>
                   <span className="text-[#3F5C96]">Safety Rating:</span>
-                  <div className="font-mono font-semibold text-emerald-700">{d.safetyScore}</div>
+                  <div className="font-mono font-semibold text-royal">{d.safetyScore}</div>
                 </div>
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function DriversPage() {
 
       {/* Enroll Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
           <div className="bg-[#FFFFFF] w-full max-w-md rounded-card border border-[#CFDBEE] p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
               <h2 className="font-light text-base text-[#061336]">Enroll New Driver</h2>

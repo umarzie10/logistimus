@@ -101,7 +101,7 @@ export default function CustomerPortalPage() {
             </button>
           </div>
           {inputError && (
-            <div className="mt-3 text-xs text-red-200 flex items-center gap-1.5">
+            <div className="mt-3 text-xs text-danger flex items-center gap-1.5">
               <AlertCircle className="w-3.5 h-3.5" />
               <span>{inputError}</span>
             </div>
@@ -116,7 +116,7 @@ export default function CustomerPortalPage() {
                 <span className="text-xs font-mono text-[#3F5C96]">Active Shipment ID</span>
                 <h3 className="text-xl font-light tabular-nums text-[#0E2F76]">{tracked.id}</h3>
               </div>
-              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 w-fit">
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-success text-midnight border border-success w-fit">
                 {tracked.status}
               </span>
             </div>
@@ -132,7 +132,7 @@ export default function CustomerPortalPage() {
               </div>
               <div>
                 <span className="text-[#3F5C96]">Estimated Delivery:</span>
-                <div className="font-mono font-semibold text-emerald-700 text-sm">{tracked.eta}</div>
+                <div className="font-mono font-semibold text-royal text-sm">{tracked.eta}</div>
               </div>
             </div>
 
@@ -144,14 +144,14 @@ export default function CustomerPortalPage() {
                   <div
                     key={idx}
                     className={`border-l-2 sm:border-l-0 sm:border-t-2 pl-3 sm:pl-0 sm:pt-2 ${
-                      t.completed ? "border-emerald-500" : "border-slate-200"
+                      t.completed ? "border-success" : "border-line"
                     }`}
                   >
-                    <div className={`font-semibold ${t.completed ? "text-[#061336]" : "text-slate-400"}`}>
+                    <div className={`font-semibold ${t.completed ? "text-[#061336]" : "text-blue-600"}`}>
                       {t.step}
                     </div>
                     <div className="text-[11px] text-[#3F5C96]">{t.location}</div>
-                    <div className="text-[10px] font-mono text-slate-400">{t.time}</div>
+                    <div className="text-[10px] font-mono text-blue-600">{t.time}</div>
                   </div>
                 ))}
               </div>

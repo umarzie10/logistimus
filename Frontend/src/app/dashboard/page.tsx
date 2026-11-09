@@ -70,7 +70,7 @@ export default function DashboardPage() {
         <div className="bg-[#FFFFFF] rounded-card border border-[#CFDBEE] p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-medium">
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-success text-midnight border border-success font-medium">
                 Active Tenant Workspace
               </span>
               <span className="text-xs text-[#3F5C96] font-mono">
@@ -139,7 +139,7 @@ export default function DashboardPage() {
             <div className="text-3xl font-light text-[#061336] tabular-nums">
               {membersCount || 1}
             </div>
-            <div className="text-xs text-emerald-700 font-medium">
+            <div className="text-xs text-muted font-medium">
               Your role: <span className="capitalize">{user?.role || "Owner"}</span>
             </div>
           </div>
@@ -200,7 +200,7 @@ export default function DashboardPage() {
                       <div className="text-xs font-semibold text-[#061336] flex items-center gap-2">
                         {branch.name}
                         {branch.is_primary && (
-                          <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                          <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-success text-midnight border border-success">
                             Primary
                           </span>
                         )}
@@ -233,7 +233,7 @@ export default function DashboardPage() {
                   <div className="font-semibold text-[#061336]">Authentication & RBAC</div>
                   <div className="text-[10px] text-[#3F5C96]">168 permissions active</div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success text-midnight border border-success">
                   Online
                 </span>
               </div>
@@ -243,7 +243,7 @@ export default function DashboardPage() {
                   <div className="font-semibold text-[#061336]">Multi-Tenant RLS</div>
                   <div className="text-[10px] text-[#3F5C96]">Row Level Isolation</div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success text-midnight border border-success">
                   Enforced
                 </span>
               </div>
@@ -253,7 +253,7 @@ export default function DashboardPage() {
                   <div className="font-semibold text-[#061336]">Orders & Shipments</div>
                   <div className="text-[10px] text-[#3F5C96]">Scheduled Phase 3</div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 text-royal border border-line">
                   Pending
                 </span>
               </div>
@@ -263,7 +263,7 @@ export default function DashboardPage() {
                   <div className="font-semibold text-[#061336]">Dispatch & Fleet Tracking</div>
                   <div className="text-[10px] text-[#3F5C96]">Scheduled Phase 4</div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-300">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-blue-100 text-royal border border-line">
                   Pending
                 </span>
               </div>

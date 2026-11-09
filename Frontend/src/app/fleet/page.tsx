@@ -69,10 +69,10 @@ export default function FleetPage() {
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Available at Depot</div>
-          <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">
+          <div className="text-2xl font-light tabular-nums text-royal mt-1">
             {vehicles.filter((v) => v.status.includes("Available") || v.status.includes("Yard")).length} Units
           </div>
-          <div className="text-xs text-emerald-700 mt-0.5 font-medium">Ready for Dispatch</div>
+          <div className="text-xs text-muted mt-0.5 font-medium">Ready for Dispatch</div>
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Telematics Link</div>
@@ -179,7 +179,7 @@ export default function FleetPage() {
 
       {/* Enroll Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
           <div className="bg-[#FFFFFF] w-full max-w-md rounded-card border border-[#CFDBEE] p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
               <h2 className="font-light text-base text-[#061336]">Enroll New Vehicle</h2>
@@ -238,7 +238,7 @@ export default function FleetPage() {
 
       {/* Telematics Drawer */}
       {inspectVehicle && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex justify-end">
           <div className="w-full max-w-lg bg-[#FFFFFF] h-full p-6 sm:p-8 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-[#CFDBEE]">
@@ -257,11 +257,11 @@ export default function FleetPage() {
               </div>
 
               <div className="mt-6 space-y-4 text-xs">
-                <div className="p-4 rounded-input bg-emerald-50 border border-emerald-200 text-emerald-800 space-y-1">
+                <div className="p-4 rounded-input bg-success border border-success text-midnight space-y-1">
                   <div className="font-semibold flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-600" /> Sensor Status: Certified Operational
+                    <ShieldCheck className="w-4 h-4 text-midnight" /> Sensor Status: Certified Operational
                   </div>
-                  <div className="text-[11px] text-emerald-700">CAN-bus diagnostics active. Encrypted telemetry.</div>
+                  <div className="text-[11px] text-midnight">CAN-bus diagnostics active. Encrypted telemetry.</div>
                 </div>
 
                 <div className="p-4 rounded-input bg-[#ffffff] border border-[#CFDBEE] space-y-3">

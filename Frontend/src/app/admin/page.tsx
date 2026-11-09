@@ -80,7 +80,7 @@ export default function AdminOverviewPage() {
       </div>
 
       {error && (
-        <div className="p-3 rounded-input bg-red-950/60 border border-red-500/40 text-red-200 text-xs">
+        <div className="p-3 rounded-input bg-danger/15 border border-danger/40 text-danger text-xs">
           {error}
         </div>
       )}
@@ -96,11 +96,11 @@ export default function AdminOverviewPage() {
             {overview?.organizations.total ?? 0}
           </div>
           <div className="text-[11px] text-[#A9C0E0] flex items-center gap-2">
-            <span className="text-emerald-400 font-medium">
+            <span className="text-success font-medium">
               {overview?.organizations.active ?? 0} active
             </span>
             <span>·</span>
-            <span className="text-amber-400">
+            <span className="text-warning">
               {overview?.organizations.pending ?? 0} pending
             </span>
           </div>
@@ -115,7 +115,7 @@ export default function AdminOverviewPage() {
             {overview?.users.total ?? 0}
           </div>
           <div className="text-[11px] text-[#A9C0E0]">
-            <span className="text-emerald-400 font-medium">
+            <span className="text-success font-medium">
               {overview?.users.verified ?? 0} verified identities
             </span>
           </div>
@@ -141,11 +141,11 @@ export default function AdminOverviewPage() {
           </div>
           <div className="flex items-center gap-2 mt-1">
             {overview?.system.database_ok ? (
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-emerald-400">
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-success">
                 <CheckCircle2 className="w-4 h-4" /> Healthy
               </span>
             ) : (
-              <span className="inline-flex items-center gap-1 text-sm font-medium text-red-400">
+              <span className="inline-flex items-center gap-1 text-sm font-medium text-danger">
                 <XCircle className="w-4 h-4" /> Degraded
               </span>
             )}
@@ -207,8 +207,8 @@ export default function AdminOverviewPage() {
                       <span
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
                           org.verification_status === "verified"
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                            : "bg-amber-950 text-amber-400 border border-amber-800"
+                            ? "bg-success/15 text-success border border-success/40"
+                            : "bg-warning/15 text-warning border border-warning/40"
                         }`}
                       >
                         {org.verification_status}
@@ -218,8 +218,8 @@ export default function AdminOverviewPage() {
                       <span
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full ${
                           org.is_active
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                            : "bg-red-950 text-red-400 border border-red-800"
+                            ? "bg-success/15 text-success border border-success/40"
+                            : "bg-danger/15 text-danger border border-danger/40"
                         }`}
                       >
                         {org.is_active ? "Active" : "Suspended"}

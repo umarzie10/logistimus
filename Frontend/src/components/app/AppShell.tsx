@@ -25,7 +25,7 @@ export function AppShell({ children, title, subtitle }: AppShellProps) {
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-[#061336]/60 backdrop-blur-sm lg:hidden transition-opacity"
+          className="fixed inset-0 z-40 bg-[#061336]/65 lg:hidden transition-opacity"
         />
       )}
 

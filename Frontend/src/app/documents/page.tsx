@@ -56,8 +56,8 @@ export default function DocumentsPage() {
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Storage Engine</div>
-            <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">S3 Private</div>
-            <div className="text-xs text-emerald-700 mt-0.5 font-medium">Encrypted at Rest</div>
+            <div className="text-2xl font-light tabular-nums text-royal mt-1">S3 Private</div>
+            <div className="text-xs text-muted mt-0.5 font-medium">Encrypted at Rest</div>
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Presigned Access</div>
@@ -66,8 +66,8 @@ export default function DocumentsPage() {
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Tenant Scope</div>
-            <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Isolated</div>
-            <div className="text-xs text-emerald-700 mt-0.5 font-medium">Postgres RLS Guarded</div>
+            <div className="text-2xl font-light tabular-nums text-royal mt-1">Isolated</div>
+            <div className="text-xs text-muted mt-0.5 font-medium">Postgres RLS Guarded</div>
           </div>
         </div>
 
@@ -150,7 +150,7 @@ export default function DocumentsPage() {
                         <button
                           type="button"
                           onClick={() => handleDelete(doc.id)}
-                          className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                          className="p-1.5 rounded-full text-danger hover:bg-danger/15 transition-colors"
                           title="Delete Document"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -166,7 +166,7 @@ export default function DocumentsPage() {
 
         {/* Upload Modal */}
         {uploadOpen && (
-          <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
             <div className="bg-[#FFFFFF] w-full max-w-md rounded-card border border-[#CFDBEE] p-6 space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
                 <h3 className="font-light text-base text-[#061336]">Upload Consignment Document</h3>

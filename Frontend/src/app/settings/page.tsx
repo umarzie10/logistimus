@@ -151,21 +151,21 @@ export default function SettingsPage() {
               <h2 className="font-light text-base text-[#061336]">Company Identity</h2>
               <p className="text-xs text-[#3F5C96]">Real tenant configuration stored in PostgreSQL</p>
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success text-midnight border border-success">
               Active Tenant
             </span>
           </div>
 
           {profileSuccess && (
-            <div className="mb-4 p-3 rounded-input bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="mb-4 p-3 rounded-input bg-success border border-success text-midnight text-xs flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-midnight" />
               <span>Organization profile updated successfully.</span>
             </div>
           )}
 
           {profileError && (
-            <div className="mb-4 p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-red-600" />
+            <div className="mb-4 p-3 rounded-input bg-danger border border-danger text-midnight text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-midnight" />
               <span>{profileError}</span>
             </div>
           )}
@@ -316,7 +316,7 @@ export default function SettingsPage() {
                     <div className="font-semibold text-[#061336] flex items-center gap-2">
                       {b.name}
                       {b.is_primary && (
-                        <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                        <span className="text-[10px] font-mono px-2 py-0.2 rounded-full bg-success text-midnight border border-success">
                           Primary
                         </span>
                       )}
@@ -349,21 +349,21 @@ export default function SettingsPage() {
           </div>
 
           {newKeySecret && (
-            <div className="mb-4 p-4 rounded-input bg-emerald-50 border border-emerald-300 text-xs space-y-2">
-              <div className="font-semibold text-emerald-900 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <div className="mb-4 p-4 rounded-input bg-success border border-success text-xs space-y-2">
+              <div className="font-semibold text-midnight flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-midnight" />
                 API Key Generated — Copy Secret Now
               </div>
-              <p className="text-emerald-800">
+              <p className="text-midnight">
                 This secret is stored hashed and will never be displayed again. Save it securely:
               </p>
-              <div className="p-2.5 rounded bg-white border border-emerald-200 font-mono text-emerald-950 select-all break-all">
+              <div className="p-2.5 rounded bg-white border border-success font-mono text-midnight select-all break-all">
                 {newKeySecret}
               </div>
               <button
                 type="button"
                 onClick={() => setNewKeySecret(null)}
-                className="text-[11px] text-emerald-900 underline font-medium"
+                className="text-[11px] text-midnight underline font-medium"
               >
                 I have saved this key safely
               </button>
@@ -420,7 +420,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleRevokeKey(k.id)}
-                    className="p-1.5 rounded-full text-red-600 hover:bg-red-50 transition-colors"
+                    className="p-1.5 rounded-full text-danger hover:bg-danger/15 transition-colors"
                     title="Revoke Key"
                   >
                     <Trash2 className="w-4 h-4" />

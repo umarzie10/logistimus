@@ -32,8 +32,8 @@ export default function NotificationsPage() {
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">WebSocket Link</div>
-            <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Ready</div>
-            <div className="text-xs text-emerald-700 mt-0.5 font-medium">/ws/ping/ Connected</div>
+            <div className="text-2xl font-light tabular-nums text-royal mt-1">Ready</div>
+            <div className="text-xs text-muted mt-0.5 font-medium">/ws/ping/ Connected</div>
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Email Channels</div>
@@ -42,8 +42,8 @@ export default function NotificationsPage() {
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Tenant Scope</div>
-            <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Secured</div>
-            <div className="text-xs text-emerald-700 mt-0.5 font-medium">Postgres RLS Guarded</div>
+            <div className="text-2xl font-light tabular-nums text-royal mt-1">Secured</div>
+            <div className="text-xs text-muted mt-0.5 font-medium">Postgres RLS Guarded</div>
           </div>
         </div>
 
@@ -58,7 +58,7 @@ export default function NotificationsPage() {
               <button
                 type="button"
                 onClick={() => setNotifications([])}
-                className="text-xs text-[#3F5C96] hover:text-red-600 font-medium inline-flex items-center gap-1"
+                className="text-xs text-[#3F5C96] hover:text-midnight font-medium inline-flex items-center gap-1"
               >
                 <Trash2 className="w-3.5 h-3.5" /> Clear All
               </button>

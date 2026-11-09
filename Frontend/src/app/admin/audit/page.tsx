@@ -50,7 +50,7 @@ export default function AdminAuditPage() {
       </div>
 
       {error && (
-        <div className="p-3 rounded-input bg-red-950/60 border border-red-500/40 text-red-200 text-xs">
+        <div className="p-3 rounded-input bg-danger/15 border border-danger/40 text-danger text-xs">
           {error}
         </div>
       )}
@@ -79,7 +79,7 @@ export default function AdminAuditPage() {
                     <td className="py-3 font-mono text-[10px] text-[#A9C0E0]">
                       {new Date(log.created_at).toLocaleString()}
                     </td>
-                    <td className="py-3 font-mono text-emerald-400 font-medium">
+                    <td className="py-3 font-mono text-success font-medium">
                       {log.action}
                     </td>
                     <td className="py-3 text-white">

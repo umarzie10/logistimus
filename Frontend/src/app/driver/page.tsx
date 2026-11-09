@@ -44,7 +44,7 @@ export default function DriverPortalPage() {
             <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#0a2156] text-[#A9C0E0]">
               DRIVER APP · PHASE 5 MODULE
             </span>
-            <span className="text-xs font-semibold text-emerald-400">Roster Ready</span>
+            <span className="text-xs font-semibold text-success">Roster Ready</span>
           </div>
           <h2 className="text-base font-light leading-tight">
             Assigned Highway Corridors
@@ -70,7 +70,7 @@ export default function DriverPortalPage() {
             aria-pressed={gpsOn}
             className={
               gpsOn
-                ? "w-full py-2.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 font-medium text-xs flex items-center justify-center gap-2"
+                ? "w-full py-2.5 rounded-full bg-success border border-success text-midnight font-medium text-xs flex items-center justify-center gap-2"
                 : "w-full py-2.5 rounded-full bg-[#0E2F76] text-[#FFFFFF] font-medium text-xs flex items-center justify-center gap-2 hover:bg-[#061336]"
             }
           >
@@ -87,8 +87,8 @@ export default function DriverPortalPage() {
           </p>
 
           {signed ? (
-            <div className="p-3 rounded-input bg-emerald-50 border border-emerald-200 text-emerald-800 font-semibold flex items-center gap-2">
-              <CheckCircle className="w-4 h-4 text-emerald-600" />
+            <div className="p-3 rounded-input bg-success border border-success text-midnight font-semibold flex items-center gap-2">
+              <CheckCircle className="w-4 h-4 text-midnight" />
               Digital e-POD Captured & Synchronized
             </div>
           ) : (

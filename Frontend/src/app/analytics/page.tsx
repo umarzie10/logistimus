@@ -25,8 +25,8 @@ export default function AnalyticsPage() {
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Tenant Scope</div>
-          <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Isolated</div>
-          <div className="text-xs text-emerald-700 mt-0.5 font-medium">Postgres RLS Guarded</div>
+          <div className="text-2xl font-light tabular-nums text-royal mt-1">Isolated</div>
+          <div className="text-xs text-muted mt-0.5 font-medium">Postgres RLS Guarded</div>
         </div>
       </div>
 

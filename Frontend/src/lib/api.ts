@@ -37,12 +37,73 @@ export class ApiError extends Error {
 
 let inMemoryAccessToken: string | null = null;
 
+/** Set once a hydrate finds no refresh cookie, so we do not re-hit the
+ *  session endpoint on every request of an anonymous page load. */
+let hydrationExhausted = false;
+
+/** In-flight single-flight hydrate promise shared by parallel requests. */
+let hydrationInFlight: Promise<string | null> | null = null;
+
 export function setAccessToken(token: string | null): void {
   inMemoryAccessToken = token;
+  if (token) {
+    // A fresh credential (login / session issue) re-opens hydration.
+    hydrationExhausted = false;
+  }
 }
 
 export function getAccessToken(): string | null {
   return inMemoryAccessToken;
+}
+
+/**
+ * Single-flight access-token hydration from the HttpOnly refresh cookie.
+ *
+ * Pages fire several authenticated requests in parallel on load; without a
+ * token each one would race into a 401 and trigger its own recovery round.
+ * One shared session fetch feeds them all instead.
+ *
+ * - `force: true` re-issues even when a token is in memory (used after a 401,
+ *   because the in-memory token may be expired).
+ * - A failed or cookie-less hydrate clears the token so we do not retry a
+ *   dead credential on every request.
+ */
+function hydrateAccessToken(force = false): Promise<string | null> {
+  if (hydrationExhausted) {
+    return Promise.resolve(null);
+  }
+  if (!force && inMemoryAccessToken) {
+    return Promise.resolve(inMemoryAccessToken);
+  }
+  if (!hydrationInFlight) {
+    hydrationInFlight = (async () => {
+      try {
+        const sessionUrl = `${API_BASE_URL.replace(/\/$/, "")}/auth/session/`;
+        const res = await fetch(sessionUrl, {
+          method: "GET",
+          headers: { "X-Requested-With": "XMLHttpRequest" },
+          credentials: "include",
+        });
+        if (res.ok) {
+          const body = (await res.json()) as { access?: string } | null;
+          if (body?.access) {
+            setAccessToken(body.access);
+            return body.access;
+          }
+        }
+        // No usable refresh cookie — drop any stale in-memory credential.
+        setAccessToken(null);
+        hydrationExhausted = true;
+        return null;
+      } catch {
+        // Network failure: proceed unauthenticated; callers surface the error.
+        return inMemoryAccessToken;
+      } finally {
+        hydrationInFlight = null;
+      }
+    })();
+  }
+  return hydrationInFlight;
 }
 
 export interface UserProfile {
@@ -221,6 +282,13 @@ async function request<T>(
     headers.set("X-Requested-With", "XMLHttpRequest");
   }
 
+  // Pre-flight hydration: a full page load starts with an empty in-memory
+  // token, so parallel data fetches would otherwise all race into 401s.
+  // Auth endpoints are excluded (login/session must work without a token).
+  if (!headers.has("Authorization") && !path.includes("/auth/")) {
+    await hydrateAccessToken();
+  }
+
   if (inMemoryAccessToken && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${inMemoryAccessToken}`);
   }
@@ -246,24 +314,15 @@ async function request<T>(
   }
 
   if (response.status === 401 && !path.includes("/auth/")) {
-    // Transparently hydrate access token from HttpOnly refresh cookie
+    // Token may be expired — force a fresh hydrate from the refresh cookie.
     try {
-      const sessionUrl = `${API_BASE_URL.replace(/\/$/, "")}/auth/session/`;
-      const sessionRes = await fetch(sessionUrl, {
-        method: "GET",
-        headers: { "X-Requested-With": "XMLHttpRequest" },
-        credentials: "include",
-      });
-      if (sessionRes.ok) {
-        const sessionData = await sessionRes.json();
-        if (sessionData?.access) {
-          setAccessToken(sessionData.access);
-          headers.set("Authorization", `Bearer ${sessionData.access}`);
-          const retryRes = await fetch(url, { ...options, headers, credentials: "include" });
-          if (retryRes.status === 204) return null as unknown as T;
-          if (retryRes.ok) {
-            return (await retryRes.json()) as T;
-          }
+      const token = await hydrateAccessToken(true);
+      if (token) {
+        headers.set("Authorization", `Bearer ${token}`);
+        const retryRes = await fetch(url, { ...options, headers, credentials: "include" });
+        if (retryRes.status === 204) return null as unknown as T;
+        if (retryRes.ok) {
+          return (await retryRes.json()) as T;
         }
       }
     } catch {

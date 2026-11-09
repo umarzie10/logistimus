@@ -11,13 +11,13 @@ export default function AIPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">AI Assistant</div>
-            <div className="text-2xl font-light tabular-nums text-amber-600 mt-1">Unconfigured</div>
+            <div className="text-2xl font-light tabular-nums text-royal mt-1">Unconfigured</div>
             <div className="text-xs text-[#3F5C96] mt-0.5">Awaiting Provider</div>
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Fabrication Defense</div>
-            <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Strict</div>
-            <div className="text-xs text-emerald-700 mt-0.5 font-medium">Zero Hallucinations</div>
+            <div className="text-2xl font-light tabular-nums text-royal mt-1">Strict</div>
+            <div className="text-xs text-muted mt-0.5 font-medium">Zero Hallucinations</div>
           </div>
           <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
             <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Context Guard</div>
@@ -33,8 +33,8 @@ export default function AIPage() {
 
         {/* Honest Unconfigured State */}
         <div className="p-8 sm:p-12 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] text-center space-y-4">
-          <div className="w-14 h-14 rounded-full bg-amber-50 border border-amber-200 text-amber-600 flex items-center justify-center mx-auto">
-            <Bot className="w-7 h-7 text-amber-600" />
+          <div className="w-14 h-14 rounded-full bg-warning border border-warning text-midnight flex items-center justify-center mx-auto">
+            <Bot className="w-7 h-7 text-midnight" />
           </div>
           <div className="space-y-1">
             <h2 className="text-lg font-light text-[#061336]">AI Co-Pilot Awaiting LLM Provider Configuration</h2>

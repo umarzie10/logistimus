@@ -79,8 +79,8 @@ function ResetPasswordForm() {
 
         {success ? (
           <div className="text-center py-6 space-y-4">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto border border-emerald-200">
-              <CheckCircle className="w-6 h-6 text-emerald-600" />
+            <div className="w-12 h-12 rounded-full bg-success text-midnight flex items-center justify-center mx-auto border border-success">
+              <CheckCircle className="w-6 h-6 text-midnight" />
             </div>
             <h2 className="text-base font-light text-[#061336]">Password Updated Successfully</h2>
             <p className="text-xs text-[#3F5C96] leading-relaxed">
@@ -101,9 +101,9 @@ function ResetPasswordForm() {
             {error && (
               <div
                 role="alert"
-                className="p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
+                className="p-3 rounded-input bg-danger border border-danger text-midnight text-xs flex items-start gap-2.5"
               >
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <AlertCircle className="w-4 h-4 text-midnight shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}

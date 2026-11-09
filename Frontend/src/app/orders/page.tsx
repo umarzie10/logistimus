@@ -248,7 +248,7 @@ export default function OrdersPage() {
 
       {/* Order Detail Drawer */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex justify-end">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex justify-end">
           <div className="w-full max-w-lg bg-[#FFFFFF] h-full p-6 sm:p-8 flex flex-col justify-between overflow-y-auto animate-in slide-in-from-right duration-200">
             <div>
               <div className="flex items-center justify-between pb-4 border-b border-[#CFDBEE]">
@@ -318,7 +318,7 @@ export default function OrdersPage() {
 
       {/* Create Order Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
           <div className="bg-[#FFFFFF] w-full max-w-lg rounded-card border border-[#CFDBEE] p-6">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
               <h3 className="font-light text-base text-[#061336]">Draft New Order</h3>

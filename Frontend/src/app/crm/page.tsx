@@ -68,8 +68,8 @@ export default function CRMPage() {
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Tenant Scope</div>
-          <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Active</div>
-          <div className="text-xs text-emerald-700 mt-0.5 font-medium">Isolated per Organization</div>
+          <div className="text-2xl font-light tabular-nums text-royal mt-1">Active</div>
+          <div className="text-xs text-muted mt-0.5 font-medium">Isolated per Organization</div>
         </div>
       </div>
 
@@ -111,7 +111,7 @@ export default function CRMPage() {
                   <h3 className="font-semibold text-sm text-[#061336]">{c.name}</h3>
                   <div className="text-xs text-[#3F5C96]">{c.industry}</div>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success text-midnight border border-success">
                   {c.contract}
                 </span>
               </div>
@@ -132,7 +132,7 @@ export default function CRMPage() {
 
       {/* Add Customer Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
           <div className="bg-[#FFFFFF] w-full max-w-md rounded-card border border-[#CFDBEE] p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
               <h2 className="font-light text-base text-[#061336]">Onboard Shipper Account</h2>

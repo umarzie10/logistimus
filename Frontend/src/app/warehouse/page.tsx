@@ -63,7 +63,7 @@ export default function WarehousePage() {
         </div>
         <div className="relative w-48 h-36 flex-shrink-0 opacity-80">
           <Image
-            src="/assets/3d/buildings/warehouse-exterior.webp"
+            src="/assets/3d/warehouses/warehouse-exterior.webp"
             alt="Logistics Warehouse"
             fill
             className="object-contain"
@@ -126,7 +126,7 @@ export default function WarehousePage() {
                     <td className="py-3 text-[#3F5C96] font-mono">{item.loc}</td>
                     <td className="py-3 font-mono font-semibold text-[#061336]">{item.qty}</td>
                     <td className="py-3">
-                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success text-midnight border border-success">
                         {item.status}
                       </span>
                     </td>
@@ -140,7 +140,7 @@ export default function WarehousePage() {
 
       {/* Inbound Scan Modal */}
       {scanOpen && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
           <div className="bg-[#FFFFFF] w-full max-w-md rounded-card border border-[#CFDBEE] p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
               <h2 className="font-light text-base text-[#061336]">Inbound Barcode / Pallet Intake</h2>

@@ -57,184 +57,268 @@ function SignUpForm() {
     }
   };
 
+  const inputClass =
+    "h-12 w-full rounded-input border border-powder bg-white pl-11 pr-4 text-[15px] text-royal transition-colors placeholder:text-blue-500 focus:border-royal";
+
   return (
-    <div className="min-h-screen bg-[#F4FEFF] flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-2xl bg-[#FFFFFF] rounded-card border border-[#CFDBEE] p-8 sm:p-12">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2.5 mb-6">
-            <div className="relative w-8 h-8">
+    <div className="sky min-h-screen flex items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
+      {/* Thin Royal rail lines (DESIGN.md §6.3) */}
+      <div aria-hidden className="pointer-events-none absolute inset-y-0 left-[9%] w-px bg-royal/20" />
+      <div aria-hidden className="pointer-events-none absolute inset-y-0 right-[9%] w-px bg-royal/20" />
+
+      <div className="relative z-10 w-full max-w-[1080px] grid lg:grid-cols-[340px_1fr] rounded-card overflow-hidden border border-line bg-white animate-hero-panel">
+        {/* Left — brand panel */}
+        <div className="relative hidden lg:flex flex-col bg-royal text-ice overflow-hidden p-10">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-72 bg-[radial-gradient(65%_100%_at_50%_0%,rgba(169,192,224,0.35),transparent_70%)]"
+          />
+          <div
+            aria-hidden
+            className="absolute inset-0 opacity-[0.14] bg-[radial-gradient(#A9C0E0_1px,transparent_1px)] [background-size:18px_18px]"
+          />
+
+          <div className="relative z-10 flex h-full flex-col">
+            <span className="type-label inline-flex w-fit items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3.5 py-1.5 text-powder">
+              <span className="size-1.5 rounded-full bg-success" aria-hidden />
+              14-day trial
+            </span>
+
+            <h2 className="mt-7 text-[clamp(30px,2.4vw,38px)] font-light leading-[1.1] tracking-display text-ice">
+              Create your company workspace.
+            </h2>
+            <p className="mt-4 text-[15px] leading-relaxed text-powder">
+              Start on the {tier} tier. No credit card required.
+            </p>
+
+            <div className="relative mt-6 flex-1 min-h-[140px]">
+              <Image
+                src="/images/truck-brand-transparent.webp"
+                alt="Logistimus 3D fleet semi-truck"
+                fill
+                className="object-contain scale-105"
+                priority
+              />
+            </div>
+
+            {/* Stacked pills — signature motif (DESIGN.md §6.1) */}
+            <div className="mt-6 grid gap-3.5">
+              <div className="rounded-card bg-ice px-5 py-4 text-center text-royal">
+                <div className="text-[16px] font-light uppercase tracking-[0.06em]">Your plan</div>
+                <div className="mt-0.5 text-sm capitalize opacity-85">{tier} tier</div>
+              </div>
+              <div className="rounded-card bg-powder px-5 py-4 text-center text-royal">
+                <div className="text-[16px] font-light uppercase tracking-[0.06em]">Trial</div>
+                <div className="mt-0.5 text-sm opacity-85">14 days · no card</div>
+              </div>
+              <div className="rounded-card border border-white/25 bg-royal px-5 py-4 text-center text-ice">
+                <div className="text-[16px] font-light uppercase tracking-[0.06em]">Next</div>
+                <div className="mt-0.5 text-sm opacity-85">Verify email to start</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right — form */}
+        <div className="p-8 sm:p-12 lg:p-14">
+          <Link href="/" className="inline-flex items-center gap-3">
+            <div className="relative size-9">
               <Image
                 src="/logo-transparent.png"
-                alt="Logistimus Logo"
+                alt="Logistimus logo"
                 fill
                 className="object-contain"
               />
             </div>
-            <span className="text-2xl font-semibold tracking-tight text-[#061336]">
+            <span className="text-xl font-semibold tracking-tight text-midnight">
               Logistimus
             </span>
           </Link>
-          <h1 className="text-2xl sm:text-3xl font-light text-[#061336]">
-            Register Your Logistics Organization
-          </h1>
-          <p className="text-sm text-[#3F5C96] mt-2">
-            Selected Tier: <span className="font-semibold capitalize text-[#061336]">{tier}</span> · 14-day enterprise trial. No credit card required.
+
+          <h1 className="type-heading mt-8 text-midnight">Register your organization</h1>
+          <p className="mt-2 text-sm text-muted">
+            Selected tier:{" "}
+            <span className="font-medium capitalize text-midnight">{tier}</span> · 14-day
+            enterprise trial. No credit card required.
           </p>
-        </div>
 
-        {error && (
-          <div
-            role="alert"
-            className="mb-6 p-3 rounded-input bg-red-50 border border-red-200 text-red-800 text-xs flex items-start gap-2.5"
-          >
-            <AlertCircle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-            <span>{error}</span>
-          </div>
-        )}
+          {error && (
+            <div
+              role="alert"
+              className="mt-6 flex items-start gap-2.5 rounded-input bg-danger px-3.5 py-3 text-xs text-midnight"
+            >
+              <AlertCircle className="size-4 shrink-0 mt-px" aria-hidden />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label htmlFor="company" className="type-label block text-muted">
+                  Company name
+                </label>
+                <div className="relative mt-2">
+                  <Building
+                    className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-blue-500"
+                    aria-hidden
+                  />
+                  <input
+                    id="company"
+                    type="text"
+                    required
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="TransAsia Logistics LLC"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="fleet" className="type-label block text-muted">
+                  Fleet size
+                </label>
+                <select
+                  id="fleet"
+                  value={fleetSize}
+                  onChange={(e) => setFleetSize(e.target.value)}
+                  className="mt-2 h-12 w-full rounded-input border border-powder bg-white px-4 text-[15px] text-royal transition-colors focus:border-royal"
+                >
+                  <option>10 – 50 Vehicles</option>
+                  <option>50 – 200 Vehicles</option>
+                  <option>200 – 1,000 Vehicles</option>
+                  <option>1,000+ Enterprise Fleet</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <div>
+                <label htmlFor="fullname" className="type-label block text-muted">
+                  Administrator full name
+                </label>
+                <div className="relative mt-2">
+                  <User
+                    className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-blue-500"
+                    aria-hidden
+                  />
+                  <input
+                    id="fullname"
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Alisher Davronov"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="phone" className="type-label block text-muted">
+                  Business phone
+                </label>
+                <div className="relative mt-2">
+                  <Phone
+                    className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-blue-500"
+                    aria-hidden
+                  />
+                  <input
+                    id="phone"
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+998 90 123 45 67"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+            </div>
+
             <div>
-              <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
-                Company Name
+              <label htmlFor="email" className="type-label block text-muted">
+                Work corporate email
               </label>
-              <div className="relative">
-                <Building className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="relative mt-2">
+                <Mail
+                  className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-blue-500"
+                  aria-hidden
+                />
                 <input
-                  type="text"
+                  id="email"
+                  type="email"
                   required
-                  value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  placeholder="e.g. TransAsia Logistics LLC"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@company.com"
+                  className={inputClass}
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
-                Fleet Size
+              <label htmlFor="password" className="type-label block text-muted">
+                Create master password
               </label>
-              <select
-                value={fleetSize}
-                onChange={(e) => setFleetSize(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
-              >
-                <option>10 – 50 Vehicles</option>
-                <option>50 – 200 Vehicles</option>
-                <option>200 – 1,000 Vehicles</option>
-                <option>1,000+ Enterprise Fleet</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
-                Administrator Full Name
-              </label>
-              <div className="relative">
-                <User className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <div className="relative mt-2">
+                <Lock
+                  className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-blue-500"
+                  aria-hidden
+                />
                 <input
-                  type="text"
+                  id="password"
+                  type="password"
                   required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Alisher Davronov"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Minimum 8 characters with numbers"
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
-                Business Phone
-              </label>
-              <div className="relative">
-                <Phone className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+998 90 123 45 67"
-                  className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
-              Work Corporate Email
-            </label>
-            <div className="relative">
-              <Mail className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <label htmlFor="terms" className="flex cursor-pointer items-start gap-2.5 pt-1">
               <input
-                type="email"
+                type="checkbox"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@company.com"
-                className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
+                id="terms"
+                checked={terms}
+                onChange={(e) => setTerms(e.target.checked)}
+                className="mt-0.5 size-4 rounded-full border-line accent-royal"
               />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-[#061336] uppercase tracking-wider mb-2">
-              Create Master Password
+              <span className="text-xs leading-relaxed text-muted">
+                I agree to the Logistimus{" "}
+                <Link href="/terms" className="text-royal underline">
+                  Master Service Agreement
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="text-royal underline">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
             </label>
-            <div className="relative">
-              <Lock className="w-4 h-4 text-[#3F5C96] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 8 characters with numbers"
-                className="w-full pl-10 pr-3 py-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
-              />
-            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-royal px-6 text-[15px] font-medium text-ice transition-colors hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Creating organization…" : "Create organization workspace"}
+              {!loading && <ArrowRight className="size-4" />}
+            </button>
+          </form>
+
+          <div className="mt-8 border-t border-line pt-6 text-center text-xs text-muted">
+            Already registered?{" "}
+            <Link href="/sign-in" className="font-medium text-royal hover:underline">
+              Sign in to your account
+            </Link>
           </div>
-
-          <div className="flex items-start gap-2.5 pt-2">
-            <input
-              type="checkbox"
-              required
-              id="terms"
-              checked={terms}
-              onChange={(e) => setTerms(e.target.checked)}
-              className="mt-0.5 rounded-full border-[#CFDBEE] text-[#0E2F76] focus:ring-[#0E2F76]"
-            />
-            <label htmlFor="terms" className="text-xs text-[#3F5C96]">
-              I agree to the Logistimus{" "}
-              <Link href="/terms" className="text-[#0E2F76] underline">
-                Master Service Agreement
-              </Link>{" "}
-              and{" "}
-              <Link href="/privacy" className="text-[#0E2F76] underline">
-                Privacy Policy
-              </Link>
-              .
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-3 px-4 rounded-full bg-[#0E2F76] hover:bg-[#061336] text-[#FFFFFF] font-medium text-sm transition-colors flex items-center justify-center gap-2 mt-4 disabled:opacity-50"
-          >
-            {loading ? "Creating organization workspace..." : "Create Organization Workspace"}
-            {!loading && <ArrowRight className="w-4 h-4" />}
-          </button>
-        </form>
-
-        <div className="mt-8 pt-6 border-t border-[#CFDBEE]/60 text-center text-xs text-[#3F5C96]">
-          Already registered?{" "}
-          <Link href="/sign-in" className="font-medium text-[#0E2F76] hover:underline">
-            Sign In to your account
-          </Link>
         </div>
       </div>
     </div>
@@ -243,7 +327,7 @@ function SignUpForm() {
 
 export default function SignUpPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-[#F4FEFF]" />}>
+    <Suspense fallback={<div className="min-h-screen bg-ice" />}>
       <SignUpForm />
     </Suspense>
   );

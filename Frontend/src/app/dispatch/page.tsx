@@ -72,8 +72,8 @@ export default function DispatchPage() {
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">WebSocket Stream</div>
-          <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">Ready</div>
-          <div className="text-xs text-emerald-700 mt-0.5 font-medium">/ws/ping/ Active</div>
+          <div className="text-2xl font-light tabular-nums text-royal mt-1">Ready</div>
+          <div className="text-xs text-muted mt-0.5 font-medium">/ws/ping/ Active</div>
         </div>
       </div>
 
@@ -156,7 +156,7 @@ export default function DispatchPage() {
 
       {/* Plan Dispatch Modal */}
       {assignOpen && (
-        <div className="fixed inset-0 z-50 bg-[#061336]/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 bg-[#061336]/65 flex items-center justify-center p-4">
           <div className="bg-[#FFFFFF] w-full max-w-md rounded-card border border-[#CFDBEE] p-6 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-[#CFDBEE]">
               <h2 className="font-light text-base text-[#061336]">Plan Dispatch Corridor</h2>

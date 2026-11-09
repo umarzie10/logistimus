@@ -88,8 +88,8 @@ export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
       {/* Right Controls */}
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Real System Status */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-[11px] font-mono text-emerald-800">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+        <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-success border border-success text-[11px] font-mono text-midnight">
+          <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
           Network Live
         </div>
 
@@ -123,7 +123,7 @@ export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
           </button>
 
           {userMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-56 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] p-2 shadow-sm z-50 animate-in fade-in duration-100 space-y-1">
+            <div className="absolute right-0 top-full mt-2 w-56 rounded-card bg-[#FFFFFF] border border-[#CFDBEE] p-2 z-50 animate-in fade-in duration-100 space-y-1">
               <div className="px-3 py-2 border-b border-[#CFDBEE]/60 text-xs">
                 <div className="font-semibold text-[#061336] truncate">{user?.email}</div>
                 <div className="text-[10px] font-mono text-[#3F5C96] capitalize">Role: {user?.role || "Member"}</div>
@@ -133,7 +133,7 @@ export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
                 <Link
                   href="/admin"
                   onClick={() => setUserMenuOpen(false)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium text-red-700 hover:bg-red-50 transition-colors"
+                  className="flex items-center gap-2 px-3 py-2 rounded-full text-xs font-medium text-midnight hover:bg-danger/15 transition-colors"
                 >
                   <ShieldCheck className="w-3.5 h-3.5" /> Admin Panel
                 </Link>
@@ -150,7 +150,7 @@ export function AppHeader({ onMenuClick, title, subtitle }: AppHeaderProps) {
               <button
                 type="button"
                 onClick={handleLogout}
-                className="w-full flex items-center gap-2 px-3 py-2 rounded-full text-xs text-red-600 hover:bg-red-50 transition-colors text-left"
+                className="w-full flex items-center gap-2 px-3 py-2 rounded-full text-xs text-midnight hover:bg-danger/15 transition-colors text-left"
               >
                 <LogOut className="w-3.5 h-3.5" /> Sign Out
               </button>

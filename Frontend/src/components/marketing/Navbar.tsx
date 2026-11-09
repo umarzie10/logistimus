@@ -202,7 +202,7 @@ export function Navbar() {
         aria-label="Navigation menu"
         aria-hidden={!mobileOpen}
         className={cn(
-          "fixed inset-0 top-0 z-40 bg-ice/95 backdrop-blur-md transition-[opacity,visibility] duration-200 lg:hidden",
+          "fixed inset-0 top-0 z-40 bg-ice transition-[opacity,visibility] duration-200 lg:hidden",
           mobileOpen ? "visible opacity-100" : "invisible opacity-0",
         )}
       >

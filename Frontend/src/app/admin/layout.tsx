@@ -68,9 +68,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   if (denied || !user) {
     return (
       <div className="min-h-screen bg-[#040C24] flex items-center justify-center p-6 text-white">
-        <div className="max-w-md w-full bg-[#061336] border border-red-500/40 rounded-card p-8 text-center space-y-4">
-          <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 text-red-400 flex items-center justify-center mx-auto">
-            <Lock className="w-6 h-6 text-red-400" />
+        <div className="max-w-md w-full bg-[#061336] border border-danger/40 rounded-card p-8 text-center space-y-4">
+          <div className="w-12 h-12 rounded-full bg-danger/10 border border-danger/30 text-danger flex items-center justify-center mx-auto">
+            <Lock className="w-6 h-6 text-danger" />
           </div>
           <h1 className="text-xl font-light text-white tracking-tight">Access Restricted</h1>
           <p className="text-xs text-[#A9C0E0] leading-relaxed">
@@ -109,7 +109,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               Logistimus <span className="font-light text-[#A9C0E0]">Admin</span>
             </span>
           </Link>
-          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-red-950/60 text-red-400 font-semibold border border-red-500/40">
+          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-danger/15 text-danger font-semibold border border-danger/40">
             ADMIN
           </span>
         </div>
@@ -130,7 +130,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               await authApi.logout();
               router.push("/sign-in");
             }}
-            className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1"
+            className="text-xs text-danger hover:text-danger flex items-center gap-1"
           >
             <LogOut className="w-3.5 h-3.5" /> Sign Out
           </button>
@@ -168,7 +168,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <div className="mt-8 pt-4 border-t border-[#1c356b] text-[10px] font-mono text-[#A9C0E0]/60 space-y-1 px-3">
             <div>Logistimus Core v0.1.0</div>
             <div>PostGIS 3.4 / PostgreSQL 16</div>
-            <div className="text-emerald-400">RLS Policies Enforced</div>
+            <div className="text-success">RLS Policies Enforced</div>
           </div>
         </aside>
 

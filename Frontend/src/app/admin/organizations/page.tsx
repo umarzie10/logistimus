@@ -88,7 +88,7 @@ export default function AdminOrganizationsPage() {
       </div>
 
       {error && (
-        <div className="p-3 rounded-input bg-red-950/60 border border-red-500/40 text-red-200 text-xs">
+        <div className="p-3 rounded-input bg-danger/15 border border-danger/40 text-danger text-xs">
           {error}
         </div>
       )}
@@ -136,8 +136,8 @@ export default function AdminOrganizationsPage() {
                         disabled={updatingId === org.id}
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full cursor-pointer hover:opacity-80 transition-opacity ${
                           org.verification_status === "verified"
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                            : "bg-amber-950 text-amber-400 border border-amber-800"
+                            ? "bg-success/15 text-success border border-success/40"
+                            : "bg-warning/15 text-warning border border-warning/40"
                         }`}
                       >
                         {org.verification_status}
@@ -150,8 +150,8 @@ export default function AdminOrganizationsPage() {
                         disabled={updatingId === org.id}
                         className={`text-[10px] font-mono px-2 py-0.5 rounded-full cursor-pointer hover:opacity-80 transition-opacity ${
                           org.is_active
-                            ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-                            : "bg-red-950 text-red-400 border border-red-800"
+                            ? "bg-success/15 text-success border border-success/40"
+                            : "bg-danger/15 text-danger border border-danger/40"
                         }`}
                       >
                         {org.is_active ? "Active" : "Suspended"}

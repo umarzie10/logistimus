@@ -50,7 +50,7 @@ export default function AdminSystemPage() {
       </div>
 
       {error && (
-        <div className="p-3 rounded-input bg-red-950/60 border border-red-500/40 text-red-200 text-xs">
+        <div className="p-3 rounded-input bg-danger/15 border border-danger/40 text-danger text-xs">
           {error}
         </div>
       )}
@@ -60,9 +60,9 @@ export default function AdminSystemPage() {
         <div className="p-6 rounded-card bg-[#061336] border border-[#1c356b] space-y-4">
           <div className="flex items-center justify-between border-b border-[#1c356b] pb-3">
             <div className="flex items-center gap-2 text-white font-medium text-sm">
-              <Database className="w-4 h-4 text-emerald-400" /> PostgreSQL & PostGIS Spatial Engine
+              <Database className="w-4 h-4 text-success" /> PostgreSQL & PostGIS Spatial Engine
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/40">
               {health?.database.connected ? "ONLINE" : "OFFLINE"}
             </span>
           </div>
@@ -74,7 +74,7 @@ export default function AdminSystemPage() {
             </div>
             <div className="flex justify-between py-1 border-b border-[#1c356b]/40">
               <span className="text-[#A9C0E0]">PostGIS Extension</span>
-              <span className="font-mono text-emerald-400 font-medium">
+              <span className="font-mono text-success font-medium">
                 {health?.database.postgis_version || "PostGIS 3.4 Active"}
               </span>
             </div>
@@ -84,7 +84,7 @@ export default function AdminSystemPage() {
             </div>
             <div className="flex justify-between py-1 border-b border-[#1c356b]/40">
               <span className="text-[#A9C0E0]">Row Level Security (RLS)</span>
-              <span className="font-mono text-emerald-400">8 Tenant Policies Active</span>
+              <span className="font-mono text-success">8 Tenant Policies Active</span>
             </div>
           </div>
         </div>
@@ -95,7 +95,7 @@ export default function AdminSystemPage() {
             <div className="flex items-center gap-2 text-white font-medium text-sm">
               <Server className="w-4 h-4 text-[#0E2F76]" /> Redis Cache & Asynchronous Broker
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-success/15 text-success border border-success/40">
               {health?.cache.connected ? "ONLINE" : "OFFLINE"}
             </span>
           </div>
@@ -107,7 +107,7 @@ export default function AdminSystemPage() {
             </div>
             <div className="flex justify-between py-1 border-b border-[#1c356b]/40">
               <span className="text-[#A9C0E0]">Channels Layer</span>
-              <span className="font-mono text-emerald-400">RedisChannelLayer (/ws/ping/)</span>
+              <span className="font-mono text-success">RedisChannelLayer (/ws/ping/)</span>
             </div>
             <div className="flex justify-between py-1 border-b border-[#1c356b]/40">
               <span className="text-[#A9C0E0]">Celery Worker Broker</span>

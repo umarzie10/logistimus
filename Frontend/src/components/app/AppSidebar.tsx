@@ -165,7 +165,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
                   <Icon className={`w-3.5 h-3.5 ${isActive ? "text-[#F4FEFF]" : "text-[#A9C0E0]"}`} />
                   <span className="flex-1">{item.name}</span>
                   {item.isNew && (
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-semibold">
+                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded-full bg-success/20 text-success font-semibold">
                       Connected
                     </span>
                   )}
@@ -238,7 +238,7 @@ export function AppSidebar({ onClose }: { onClose?: () => void }) {
                       </div>
                     </div>
                     {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 ml-1" />
+                      <Check className="w-3.5 h-3.5 text-success flex-shrink-0 ml-1" />
                     )}
                   </button>
                 );

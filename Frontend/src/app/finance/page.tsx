@@ -52,8 +52,8 @@ export default function FinancePage() {
         </div>
         <div className="p-4 rounded-card bg-[#FFFFFF] border border-[#CFDBEE]">
           <div className="text-xs font-semibold text-[#061336] uppercase tracking-wider">Currency Base</div>
-          <div className="text-2xl font-light tabular-nums text-emerald-600 mt-1">USD ($)</div>
-          <div className="text-xs text-emerald-700 mt-0.5 font-medium">Multi-Currency Ready</div>
+          <div className="text-2xl font-light tabular-nums text-royal mt-1">USD ($)</div>
+          <div className="text-xs text-muted mt-0.5 font-medium">Multi-Currency Ready</div>
         </div>
       </div>
 
