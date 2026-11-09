@@ -91,6 +91,7 @@ export interface RegisterRequest {
   password: string;
   full_name?: string;
   phone?: string;
+  acceptTerms?: boolean;
 }
 
 export interface RegisterResponse {

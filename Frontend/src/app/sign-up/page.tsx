@@ -38,6 +38,7 @@ export default function SignUpPage() {
         password,
         full_name: fullName.trim() || undefined,
         phone: phone.trim() || undefined,
+        acceptTerms: true,
       });
 
       router.push(`/verify-email?email=${encodeURIComponent(email.trim())}`);

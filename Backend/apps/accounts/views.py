@@ -92,6 +92,7 @@ _AUTH_BODY = obj(
             "password": serializers.CharField(),
             "full_name": serializers.CharField(required=False, allow_blank=True),
             "phone": serializers.CharField(required=False, allow_blank=True),
+            "acceptTerms": serializers.BooleanField(required=False, default=True),
         },
     ),
     responses={
