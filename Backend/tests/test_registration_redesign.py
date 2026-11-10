@@ -182,3 +182,216 @@ class TestRegistrationRedesign:
         assert login_resp.status_code == 200
         assert login_resp.json()["user"]["email"] == FULL_REGISTRATION_PAYLOAD["email"]
         assert login_resp.json()["user"]["role"] == "owner"
+
+    def test_brute_force_throttled_after_5_attempts(self, api):
+        reg = api.post("/api/v1/auth/register/", FULL_REGISTRATION_PAYLOAD, format="json")
+        assert reg.status_code == 201
+
+        # 4 wrong attempts -> invalid_code (400)
+        for _ in range(4):
+            resp = api.post(
+                "/api/v1/auth/verify-email/",
+                {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": "000000"},
+                format="json",
+            )
+            assert resp.status_code == 400
+            assert resp.json()["error"]["code"] == "invalid_code"
+
+        # 5th wrong attempt -> rate_limited (429)
+        resp5 = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": "000000"},
+            format="json",
+        )
+        assert resp5.status_code == 429
+        assert resp5.json()["error"]["code"] == "rate_limited"
+
+        # 6th attempt even with correct code is now blocked
+        correct_code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        resp6 = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": correct_code},
+            format="json",
+        )
+        assert resp6.status_code == 429
+        assert resp6.json()["error"]["code"] == "rate_limited"
+
+    def test_expired_code_rejected_410(self, api):
+        from datetime import timedelta
+
+        from django.utils import timezone
+
+        from apps.accounts.models import EmailVerification
+
+        reg = api.post("/api/v1/auth/register/", FULL_REGISTRATION_PAYLOAD, format="json")
+        assert reg.status_code == 201
+        code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+
+        # Force expiration in DB
+        EmailVerification.objects.filter(user__email=FULL_REGISTRATION_PAYLOAD["email"]).update(
+            expires_at=timezone.now() - timedelta(minutes=1)
+        )
+
+        resp = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": code},
+            format="json",
+        )
+        assert resp.status_code == 410
+        assert resp.json()["error"]["code"] == "code_expired"
+
+    def test_already_used_code_cannot_be_reused(self, api):
+        reg = api.post("/api/v1/auth/register/", FULL_REGISTRATION_PAYLOAD, format="json")
+        assert reg.status_code == 201
+        code = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+
+        # Verify once -> 200
+        resp1 = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": code},
+            format="json",
+        )
+        assert resp1.status_code == 200
+        assert resp1.json()["verified"] is True
+
+        # Attempt to reuse the same code -> 400 invalid_code
+        resp2 = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": code},
+            format="json",
+        )
+        assert resp2.status_code == 400
+        assert resp2.json()["error"]["code"] == "invalid_code"
+
+    def test_old_code_invalidated_when_new_code_generated(self, api):
+        from django.core.cache import cache
+
+        reg = api.post("/api/v1/auth/register/", FULL_REGISTRATION_PAYLOAD, format="json")
+        assert reg.status_code == 201
+        code1 = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+
+        # Clear cooldown in cache so resend generates a new code
+        cache.clear()
+
+        # Resend code
+        resend_resp = api.post(
+            "/api/v1/auth/resend-verification/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"]},
+            format="json",
+        )
+        assert resend_resp.status_code == 202
+        assert len(mail.outbox) == 2
+        code2 = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+
+        # Code 1 must now fail (it was superseded/invalidated)
+        resp_code1 = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": code1},
+            format="json",
+        )
+        assert resp_code1.status_code == 400
+        assert resp_code1.json()["error"]["code"] == "invalid_code"
+
+        # Code 2 succeeds
+        resp_code2 = api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": code2},
+            format="json",
+        )
+        assert resp_code2.status_code == 200
+        assert resp_code2.json()["verified"] is True
+
+    def test_resend_cooldown_rate_limiting(self, api):
+        reg = api.post("/api/v1/auth/register/", FULL_REGISTRATION_PAYLOAD, format="json")
+        assert reg.status_code == 201
+        assert len(mail.outbox) == 1
+
+        # Immediate resend attempt while cooldown is active
+        resend_resp = api.post(
+            "/api/v1/auth/resend-verification/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"]},
+            format="json",
+        )
+        assert resend_resp.status_code == 202
+        assert resend_resp.json()["cooldown_seconds"] > 0
+        # No new email was sent during active cooldown
+        assert len(mail.outbox) == 1
+
+    def test_sensitive_keys_redacted_in_json_logging(self):
+        import json
+        import logging
+
+        from apps.core.logging import JsonFormatter
+
+        formatter = JsonFormatter()
+        record = logging.LogRecord(
+            name="test",
+            level=logging.INFO,
+            pathname=__file__,
+            lineno=1,
+            msg="User registration event",
+            args=(),
+            exc_info=None,
+        )
+        record.password = "SuperSecretPassword123!"
+        record.code = "481920"
+        record.token = "token-abcdef12345"
+        record.safe_param = "public_value"
+
+        output = json.loads(formatter.format(record))
+        assert output["password"] == "[REDACTED]"
+        assert output["code"] == "[REDACTED]"
+        assert output["token"] == "[REDACTED]"
+        assert output["safe_param"] == "public_value"
+
+    def test_organization_tenant_isolation_between_registrants(self, api):
+        # Register Org 1
+        resp1 = api.post("/api/v1/auth/register/", FULL_REGISTRATION_PAYLOAD, format="json")
+        assert resp1.status_code == 201
+        code1 = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": FULL_REGISTRATION_PAYLOAD["email"], "code": code1},
+            format="json",
+        )
+
+        # Login as User 1
+        login1 = api.post(
+            "/api/v1/auth/login/",
+            {
+                "email": FULL_REGISTRATION_PAYLOAD["email"],
+                "password": FULL_REGISTRATION_PAYLOAD["password"],
+            },
+            format="json",
+        )
+        assert login1.status_code == 200
+        token1 = login1.json()["access"]
+
+        # Register Org 2
+        payload2 = {
+            **FULL_REGISTRATION_PAYLOAD,
+            "email": "stranger@otherlogistics.com",
+            "companyName": "Other Logistics Inc",
+        }
+        resp2 = api.post("/api/v1/auth/register/", payload2, format="json")
+        assert resp2.status_code == 201
+        code2 = re.search(r"\b(\d{6})\b", mail.outbox[-1].body).group(1)
+        api.post(
+            "/api/v1/auth/verify-email/",
+            {"email": payload2["email"], "code": code2},
+            format="json",
+        )
+
+        org2 = Organization.objects.get(name="Other Logistics Inc")
+
+        # User 1 attempts to query with token1
+        api.credentials(HTTP_AUTHORIZATION=f"Bearer {token1}")
+
+        # Branches of Org 2 cannot be queried by User 1
+        branch_resp = api.get("/api/v1/organizations/current/branches/")
+        assert branch_resp.status_code == 200
+        results = branch_resp.json().get("results", [])
+        assert len(results) >= 1
+        for b in results:
+            assert "Silk Road" in b["name"]
+            assert b.get("organization_id") != str(org2.id)

@@ -424,6 +424,13 @@ def _send_verification(user, purpose: str) -> str:
         # Cooldown active: keep the previous code, report remaining seconds.
         return str(remaining)
 
+    # Invalidate any prior unconsumed verification codes for this purpose
+    EmailVerification.objects.filter(
+        user=user,
+        purpose=purpose,
+        consumed_at__isnull=True,
+    ).update(consumed_at=timezone.now())
+
     code = f"{secrets.randbelow(1_000_000):06d}"
     EmailVerification.objects.create(
         user=user,
@@ -434,21 +441,33 @@ def _send_verification(user, purpose: str) -> str:
     _start_cooldown(email)
     _bump(f"auth:verify_count:{email}", 3600)
 
+    from django.conf import settings
+    from django.db import connection
+
     from apps.accounts import tasks  # noqa: PLC0415
 
-    tasks.send_verification_email.delay(to_email=email, code=code)
+    if getattr(settings, "CELERY_TASK_ALWAYS_EAGER", False) or not connection.in_atomic_block:
+        tasks.send_verification_email.delay(to_email=email, code=code)
+    else:
+        transaction.on_commit(
+            lambda: tasks.send_verification_email.delay(to_email=email, code=code)
+        )
     return str(COOLDOWN_SECONDS)
 
 
 def verify_email(*, email: str, code: str) -> dict:
     email = email.lower().strip()
-    user = User.objects.filter(email=email).first()
     now = timezone.now()
 
-    verification = None
-    if user is not None:
+    user = User.objects.filter(email=email).first()
+    if user is None:
+        raise ApiError("invalid_code", "This verification code is not valid.")
+
+    code_match = False
+    with transaction.atomic():
         verification = (
-            EmailVerification.objects.filter(
+            EmailVerification.objects.select_for_update()
+            .filter(
                 user=user,
                 purpose=EmailVerification.Purpose.REGISTER,
                 consumed_at__isnull=True,
@@ -457,37 +476,41 @@ def verify_email(*, email: str, code: str) -> dict:
             .first()
         )
 
-    if verification is None:
-        raise ApiError("invalid_code", "This verification code is not valid.")
+        if verification is None:
+            raise ApiError("invalid_code", "This verification code is not valid.")
 
-    if verification.expires_at <= now:
-        raise ApiError("code_expired", "This verification code has expired.")
+        if verification.expires_at <= now:
+            raise ApiError("code_expired", "This verification code has expired.")
 
-    if verification.attempts >= EmailVerification.MAX_ATTEMPTS:
-        raise ApiError("rate_limited", "Too many attempts — request a new code.")
+        if verification.attempts >= EmailVerification.MAX_ATTEMPTS:
+            raise ApiError("rate_limited", "Too many attempts — request a new code.")
 
-    verification.attempts += 1
-    if _sha256(code) != verification.code_hash:
-        verification.save(update_fields=["attempts"])
+        verification.attempts += 1
+        if _sha256(code) != verification.code_hash:
+            verification.save(update_fields=["attempts"])
+        else:
+            code_match = True
+            verification.consumed_at = now
+            verification.save(update_fields=["consumed_at"])
+            user.email_verified_at = now
+            user.save(update_fields=["email_verified_at"])
+
+            # Proving mailbox ownership is what authorizes invitation joins.
+            joined = org_services.consume_pending_invitations(user)
+
+            audit.record(
+                action="auth.email_verified",
+                object_type="user",
+                object_id=user.id,
+                actor=user,
+                actor_email=user.email,
+            )
+
+    if not code_match:
         if verification.attempts >= EmailVerification.MAX_ATTEMPTS:
             raise ApiError("rate_limited", "Too many attempts — request a new code.")
         raise ApiError("invalid_code", "This verification code is not valid.")
 
-    verification.consumed_at = now
-    verification.save(update_fields=["consumed_at"])
-    user.email_verified_at = now
-    user.save(update_fields=["email_verified_at"])
-
-    # Proving mailbox ownership is what authorizes invitation joins.
-    joined = org_services.consume_pending_invitations(user)
-
-    audit.record(
-        action="auth.email_verified",
-        object_type="user",
-        object_id=user.id,
-        actor=user,
-        actor_email=user.email,
-    )
     return {"verified": True, "joined_organizations": joined}
 
 

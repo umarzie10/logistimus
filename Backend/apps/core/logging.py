@@ -27,10 +27,30 @@ class JsonFormatter(logging.Formatter):
             payload["organization_id"] = str(org_id)
 
         # Attach extras emitted via `logger.info("...", extra={...})`
+        _SENSITIVE_EXACT_KEYS = frozenset(
+            {
+                "password",
+                "secret",
+                "token",
+                "code",
+                "authorization",
+                "cookie",
+                "key_hash",
+                "code_hash",
+                "confirm_password",
+                "confirmpassword",
+            }
+        )
         for key, value in getattr(record, "__dict__", {}).items():
             if key.startswith("_") or key in _STANDARD_ATTRS:
                 continue
-            if isinstance(value, (str, int, float, bool, type(None))):
+            key_lower = key.lower()
+            if (
+                key_lower in _SENSITIVE_EXACT_KEYS
+                or key_lower.endswith(("_password", "_secret", "_token", "_hash", "_key"))
+            ):
+                payload[key] = "[REDACTED]"
+            elif isinstance(value, (str, int, float, bool, type(None))):
                 payload[key] = value
             else:
                 payload[key] = str(value)

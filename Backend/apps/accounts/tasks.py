@@ -10,8 +10,14 @@ from django.conf import settings
 logger = logging.getLogger(__name__)
 
 
-@shared_task(ignore_result=True)
-def send_verification_email(*, to_email: str, code: str) -> None:
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    max_retries=3,
+)
+def send_verification_email(self, *, to_email: str, code: str) -> None:
     """6-digit verification code. Dev: console backend; prod: SMTP/SES."""
     from django.core.mail import send_mail  # noqa: PLC0415
 
@@ -27,11 +33,17 @@ def send_verification_email(*, to_email: str, code: str) -> None:
         recipient_list=[to_email],
         fail_silently=False,
     )
-    logger.info("verification email queued for %s", to_email)
+    logger.info("verification email sent to %s", to_email)
 
 
-@shared_task(ignore_result=True)
-def send_password_reset_email(*, to_email: str, token: str) -> None:
+@shared_task(
+    bind=True,
+    ignore_result=True,
+    autoretry_for=(Exception,),
+    retry_backoff=True,
+    max_retries=3,
+)
+def send_password_reset_email(self, *, to_email: str, token: str) -> None:
     """Single-use reset link (60-minute TTL, hashed at rest)."""
     from django.core.mail import send_mail  # noqa: PLC0415
 
