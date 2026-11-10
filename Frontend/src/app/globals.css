@@ -194,27 +194,6 @@ body {
     linear-gradient(180deg, #7e9ccf 0%, #a9c0e0 45%, #f4feff 100%);
 }
 
-.sky::before,
-.sky::after {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  bottom: -4%;
-  width: 30%;
-  height: 78%;
-  background: #f4feff;
-}
-
-.sky::before {
-  left: -4%;
-  clip-path: polygon(0 12%, 100% 0, 100% 100%, 0 100%);
-}
-
-.sky::after {
-  right: -4%;
-  clip-path: polygon(0 0, 100% 14%, 100% 100%, 0 100%);
-}
-
 @keyframes hero-enter {
   from {
     opacity: 0;

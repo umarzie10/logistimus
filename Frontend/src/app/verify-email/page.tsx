@@ -126,11 +126,7 @@ function VerifyEmailForm() {
   };
 
   return (
-    <div className="sky min-h-screen flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
-      {/* Thin Royal rail lines (DESIGN.md §6.3) */}
-      <div aria-hidden className="pointer-events-none absolute inset-y-0 left-[9%] w-px bg-royal/20" />
-      <div aria-hidden className="pointer-events-none absolute inset-y-0 right-[9%] w-px bg-royal/20" />
-
+    <div className="min-h-screen bg-ice flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8 relative">
       <div className="relative z-10 w-full max-w-md bg-white rounded-card border border-line p-8 sm:p-10 shadow-sm animate-hero-panel">
         <div className="text-center mb-6">
           <Link href="/" className="inline-flex items-center gap-2.5 mb-4">
