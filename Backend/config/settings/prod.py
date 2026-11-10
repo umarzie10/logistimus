@@ -53,6 +53,17 @@ SESSION_COOKIE_AGE = 60 * 60 * 8
 if not env.bool("ENABLE_ADMIN", default=False):
     INSTALLED_APPS = [a for a in INSTALLED_APPS if a != "django.contrib.admin"]  # noqa: F405
 
+# API schema / Swagger / ReDoc are unauthenticated by default (drf-spectacular
+# SERVE_PERMISSIONS=AllowAny), which advertises every endpoint, parameter and
+# model to anonymous callers. Nothing at runtime consumes them — the frontend
+# only fetches /api/schema/ from a local dev server during type generation —
+# so production requires a logged-in user. Set
+# SPECTACULAR_SETTINGS__SERVE_PERMISSIONS=AllowAny to publish the docs.
+if env.str("SPECTACULAR_SETTINGS__SERVE_PERMISSIONS", default="") != "AllowAny":
+    SPECTACULAR_SETTINGS["SERVE_PERMISSIONS"] = [  # noqa: F405
+        "rest_framework.permissions.IsAuthenticated"
+    ]
+
 # Static via WhiteNoise, media via S3 (required in prod) ----------------------
 STORAGES["staticfiles"] = {  # noqa: F405
     "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
