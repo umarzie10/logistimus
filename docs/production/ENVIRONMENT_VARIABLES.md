@@ -35,6 +35,11 @@ Backend reads `Backend/.env` via `environ.Env.read_env()` (optional — env vars
 process environment always win in practice for containers). The frontend reads
 `Frontend/.env` / process env at **build** time.
 
+Additionally, `docker-compose.deploy.yml` on the deployment host reads the
+repository root `.env` (template: `.env.example`) to interpolate container
+variables before starting (`POSTGRES_PASSWORD`, `MINIO_ROOT_PASSWORD`,
+`NEXT_PUBLIC_API_URL`). See `.env.example` in the project root.
+
 ---
 
 ## 1. Backend — core
