@@ -137,3 +137,27 @@ def rls_enabled_tables() -> list[str]:
             """
         )
         return [row[0] for row in cursor.fetchall()]
+
+
+def existing_tables() -> set[str]:
+    """Physical tables currently present in the public schema.
+
+    Used by the RLS convention check to tell "table exists without RLS"
+    (a real security error) apart from "table not created yet" (a database
+    where `manage.py migrate` has not run — which is exactly the state a
+    fresh deployment starts in, and the state `migrate` itself must be able
+    to get out of).
+    """
+    if not _vendor_is_postgres():
+        return set()
+    with connection.cursor() as cursor:
+        cursor.execute(
+            """
+            SELECT c.relname
+              FROM pg_class c
+              JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE c.relkind = 'r'
+               AND n.nspname = 'public'
+            """
+        )
+        return {row[0] for row in cursor.fetchall()}

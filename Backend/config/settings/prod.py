@@ -5,6 +5,22 @@ from .base import env  # noqa: F401
 
 DEBUG = False
 
+# Environment label ----------------------------------------------------------
+# base.py reads DJANGO_ENV; the template ships `development` for local work.
+# Under prod settings that label is always wrong: it drives the S3 key prefix
+# (objects would land in development/) and the /health/ report. Fall back to
+# `production`; an operator who wants a distinct label (e.g. staging) sets
+# DJANGO_ENV explicitly to a non-development value in the environment file.
+if DJANGO_ENV == "development":  # noqa: F405
+    DJANGO_ENV = "production"  # noqa: F405
+    # base.py already built STORAGES["default"] with the `development/` key
+    # prefix (it runs at import time, before this remap). Keep object keys
+    # under the same label as the rest of the environment.
+    _default_storage = STORAGES.get("default", {})  # noqa: F405
+    _s3_opts = _default_storage.get("OPTIONS")  # noqa: F405
+    if _s3_opts and _s3_opts.get("location") == "development/":  # noqa: F405
+        _s3_opts["location"] = "production/"  # noqa: F405
+
 # Trust proxy headers from Nginx only (it terminates TLS in front of us)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 USE_X_FORWARDED_HOST = True
@@ -71,6 +87,14 @@ if SECRET_KEY == DEV_KEY_SENTINEL:  # noqa: F405
 
 # Also reject the short placeholder that appears in older docs/examples.
 assert SECRET_KEY != "unsafe-dev-key-change-me", "Set SECRET_KEY"  # noqa: F405
+
+# Reject template/placeholder secrets (.env.example ships a `change-me...`
+# value that would otherwise sail past the sentinel comparison) and anything
+# too weak to sign tokens.
+if "change-me" in SECRET_KEY.lower() or "changeme" in SECRET_KEY.lower():  # noqa: F405
+    raise RuntimeError("SECRET_KEY still holds a placeholder value — generate a real one")
+if len(SECRET_KEY) < 50:  # noqa: F405
+    raise RuntimeError("SECRET_KEY must be at least 50 characters in production")
 
 # Error reporting (env-driven, optional) ---------------------------------------
 SENTRY_DSN = env("SENTRY_DSN", default="")

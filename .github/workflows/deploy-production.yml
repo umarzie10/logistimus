@@ -1,0 +1,144 @@
+# Deploys main to the PRODUCTION host.
+#
+# TWO independent gates before anything runs:
+#   1. `environment: production` — GitHub environment protection rules
+#      (required reviewers) must be configured in repo settings; GitHub then
+#      blocks the run until a human approves it in the UI.
+#   2. `workflow_dispatch` only — pushing to main does NOT deploy. A human
+#      must open Actions → Deploy Production → Run workflow and pick the ref.
+#
+# If the `production` environment has no required reviewers configured, the
+# workflow fails closed below instead of deploying unattended.
+
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref to deploy (usually main)"
+        required: true
+        default: "main"
+      confirm:
+        description: "Type the exact string DEPLOY PRODUCTION to confirm"
+        required: true
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Confirm the deploy was deliberate
+        run: |
+          if [ "${{ inputs.confirm }}" != "DEPLOY PRODUCTION" ]; then
+            echo "confirmation string did not match — aborting"
+            exit 1
+          fi
+          echo "confirmed for ref ${{ inputs.ref }}"
+
+      - name: Require configured protection rules
+        # Fail closed: without required reviewers on the `production`
+        # environment, `environment:` alone would not gate anything.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rules=$(gh api "repos/${{ github.repository }}/environments/production" \
+            --jq '.protection_rules[]? | select(.type=="required_reviewers")' 2>/dev/null || true)
+          if [ -z "$rules" ]; then
+            echo "::error::production environment has no required reviewers — refusing to deploy unattended"
+            exit 1
+          fi
+          echo "required reviewers configured"
+
+  deploy:
+    needs: guard
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Back up database before touching anything
+        env:
+          POSTGRES_PASSWORD: ${{ vars.PROD_POSTGRES_PASSWORD }}
+        run: |
+          ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd "${REPO_DIR:-$HOME/logistimus}"
+          export POSTGRES_PASSWORD
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          docker compose -f docker-compose.deploy.yml exec -T db \
+            pg_dump -U "${POSTGRES_USER:-logistimus}" -d "${POSTGRES_DB:-logistimus}" -Fc \
+            > "pre-deploy-$stamp.dump"
+          echo "backup: pre-deploy-$stamp.dump ($(du -h pre-deploy-$stamp.dump | cut -f1))"
+          REMOTE
+
+      - name: Deploy
+        env:
+          POSTGRES_PASSWORD: ${{ vars.PROD_POSTGRES_PASSWORD }}
+          MINIO_ROOT_PASSWORD: ${{ vars.PROD_MINIO_ROOT_PASSWORD }}
+          NEXT_PUBLIC_API_URL: ${{ vars.PROD_NEXT_PUBLIC_API_URL }}
+        run: |
+          ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd "${REPO_DIR:-$HOME/logistimus}"
+          test -f Backend/.env || { echo "Backend/.env missing on production host"; exit 1; }
+
+          git fetch --prune origin
+          previous=$(git rev-parse HEAD)
+          git reset --hard "${DEPLOY_REF}"
+          echo "previous: $previous -> now: $(git rev-parse HEAD)"
+
+          export POSTGRES_PASSWORD MINIO_ROOT_PASSWORD NEXT_PUBLIC_API_URL
+          docker compose -f docker-compose.deploy.yml build
+          docker compose -f docker-compose.deploy.yml run --rm api \
+            uv run manage.py migrate --noinput
+          docker compose -f docker-compose.deploy.yml up -d
+          echo "PREVIOUS_SHA=$previous" >> "$GITHUB_ENV"
+          REMOTE
+        env:
+          DEPLOY_REF: ${{ inputs.ref }}
+
+      - name: Verify production health
+        run: |
+          ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            code=$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/health/ready/ || true)
+            [ "$code" = "200" ] && { echo "production ready: HTTP $code"; exit 0; }
+            sleep 5
+          done
+          echo "production readiness probe never returned 200"
+          exit 1
+          REMOTE
+
+  rollback:
+    needs: deploy
+    if: failure()
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Roll back to the previous revision
+        env:
+          PREVIOUS_SHA: ${{ needs.deploy.outputs.previous_sha }}
+        run: |
+          echo "Deploy failed — manual rollback required."
+          echo "Previous revision: ${PREVIOUS_SHA:-unknown}"
+          echo "See docs/production/ROLLBACK_PLAN.md §3 (automated rollback)."
+          exit 1

@@ -1,0 +1,23 @@
+# Keep secrets, local data, and caches out of the image.
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+db.sqlite3
+staticfiles/
+# Env files are runtime-provided via compose `env_file`/`environment`,
+# never baked into image layers.
+.env
+.env.*
+!.env.example
+.git/
+.gitignore
+tests/
+docs/
+docker-compose.yml
+Dockerfile

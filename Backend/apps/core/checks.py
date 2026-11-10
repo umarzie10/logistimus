@@ -25,13 +25,19 @@ def rls_convention_check(app_configs, **kwargs):
     from django.apps import apps
 
     enabled = set(db.rls_enabled_tables())
+    # Only tables that physically exist can violate the convention. Without
+    # this filter a brand-new database (no migrations applied yet) fails
+    # E001 for every tenant model, which deadlocks deployment: `migrate`
+    # runs system checks BEFORE applying migrations, so RLS could never be
+    # created. Once a table exists, missing RLS is still a hard error.
+    present = db.existing_tables()
     for model in apps.get_models():
         if not getattr(model, "traced_by_org", False):
             continue
         if not any(f.name == "organization" for f in model._meta.fields):
             continue
         table = model._meta.db_table
-        if table not in enabled:
+        if table in present and table not in enabled:
             errors.append(
                 Error(
                     f"Tenant table '{table}' lacks a PostgreSQL RLS policy.",

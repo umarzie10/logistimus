@@ -162,3 +162,88 @@ class TestRLSPostgres:
         if not connection.in_atomic_block:  # pragma: no cover
             with pytest.raises(RuntimeError, match="open transaction"):
                 core_db.set_organization_context(scratch_rls["org_a"])
+
+
+class _FakeField:
+    name = "organization"
+
+
+class _FakeMeta:
+    def __init__(self, table):
+        self.db_table = table
+
+
+class _FakeModel:
+    traced_by_org = True
+    _meta = None
+
+    def __init__(self, table):
+        self._meta = _FakeMeta(table)
+        self._meta.fields = [_FakeField()]
+
+
+class TestRLSConventionCheck:
+    """E001 must fire for an existing table without RLS, and stay silent for
+    a database where migrations have not run yet.
+
+    The second half is a deployment regression guard: `manage.py migrate`
+    executes system checks BEFORE applying migrations, so a check that
+    flags absent tables deadlocks every fresh install (the RLS policy could
+    never be created). Found during Phase 3 staging readiness.
+    """
+
+    def test_migrated_database_passes(self, db):
+        # Requires a migrated database: the check queries pg_class.
+        from apps.core.checks import rls_convention_check
+
+        assert rls_convention_check(None) == []
+
+    def test_absent_table_is_not_an_error(self, monkeypatch):
+        from apps.core import checks
+
+        # Simulate a brand-new database: the model exists in Django, the
+        # physical table does not.
+        monkeypatch.setattr(
+            checks,
+            "db",
+            type(
+                "Db",
+                (),
+                {
+                    "rls_enabled_tables": staticmethod(lambda: []),
+                    "existing_tables": staticmethod(set),
+                    "_vendor_is_postgres": staticmethod(lambda: True),
+                },
+            )(),
+        )
+        monkeypatch.setattr(
+            "django.apps.apps.get_models",
+            lambda: [_FakeModel("organizations_branch")],
+        )
+        assert checks.rls_convention_check(None) == []
+
+    def test_existing_table_without_rls_is_an_error(self, monkeypatch):
+        from apps.core import checks
+
+        monkeypatch.setattr(
+            checks,
+            "db",
+            type(
+                "Db",
+                (),
+                {
+                    "rls_enabled_tables": staticmethod(lambda: []),
+                    "existing_tables": staticmethod(
+                        lambda: {"organizations_branch"}
+                    ),
+                    "_vendor_is_postgres": staticmethod(lambda: True),
+                },
+            )(),
+        )
+        monkeypatch.setattr(
+            "django.apps.apps.get_models",
+            lambda: [_FakeModel("organizations_branch")],
+        )
+        errors = checks.rls_convention_check(None)
+        assert len(errors) == 1
+        assert errors[0].id == "logistimus.E001"

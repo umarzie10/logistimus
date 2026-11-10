@@ -1,0 +1,83 @@
+# Deploys the develop branch to the STAGING host.
+#
+# Staging uses config.settings.prod (see docs/production/ENVIRONMENT_VARIABLES.md
+# §0 — there is no separate staging settings module); the environment differs
+# only by host, secrets and NEXT_PUBLIC_API_URL.
+#
+# Required repository secrets:
+#   STAGING_SSH_KEY, STAGING_HOST, STAGING_USER, STAGING_PORT
+# Required repository variables:
+#   STAGING_POSTGRES_PASSWORD, STAGING_MINIO_ROOT_PASSWORD,
+#   STAGING_SECRET_KEY, STAGING_ALLOWED_HOSTS, STAGING_CORS_ORIGINS,
+#   STAGING_NEXT_PUBLIC_API_URL
+#
+# This workflow NEVER touches production: it targets STAGING_HOST only.
+
+name: Deploy Staging
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.STAGING_HOST }} $(cat /etc/hosts | awk '{print $1}' | grep -m1 .)" >> ~/.ssh/known_hosts 2>/dev/null || true
+          ssh-keyscan -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Deploy (build on host, migrate, restart)
+        env:
+          POSTGRES_PASSWORD: ${{ vars.STAGING_POSTGRES_PASSWORD }}
+          MINIO_ROOT_PASSWORD: ${{ vars.STAGING_MINIO_ROOT_PASSWORD }}
+          SECRET_KEY: ${{ vars.STAGING_SECRET_KEY }}
+          ALLOWED_HOSTS: ${{ vars.STAGING_ALLOWED_HOSTS }}
+          CORS_ALLOWED_ORIGINS: ${{ vars.STAGING_CORS_ORIGINS }}
+          NEXT_PUBLIC_API_URL: ${{ vars.STAGING_NEXT_PUBLIC_API_URL }}
+        run: |
+          ssh -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd "${REPO_DIR:-$HOME/logistimus}"
+          git fetch --prune origin
+          git reset --hard origin/develop
+
+          # .env is created once by an operator; refresh non-secret host config.
+          test -f Backend/.env || { echo "Backend/.env missing on staging host"; exit 1; }
+
+          export POSTGRES_PASSWORD MINIO_ROOT_PASSWORD NEXT_PUBLIC_API_URL
+          docker compose -f docker-compose.deploy.yml pull || true
+          docker compose -f docker-compose.deploy.yml build
+          docker compose -f docker-compose.deploy.yml run --rm api \
+            uv run manage.py migrate --noinput
+          docker compose -f docker-compose.deploy.yml up -d
+          docker compose -f docker-compose.deploy.yml ps
+          REMOTE
+
+      - name: Verify staging health
+        run: |
+          ssh -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
+            'bash -s' <<'REMOTE'
+          set -euo pipefail
+          for i in $(seq 1 30); do
+            code=$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/health/ready/ || true)
+            [ "$code" = "200" ] && { echo "staging ready: HTTP $code"; exit 0; }
+            sleep 5
+          done
+          echo "staging readiness probe never returned 200"
+          exit 1
+          REMOTE

@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  // Self-contained server bundle for the production Docker image
+  // (`.next/standalone/server.js`); `next start` keeps working locally.
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   async redirects() {

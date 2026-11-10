@@ -3,6 +3,7 @@
 services:
   db:
     image: postgis/postgis:16-3.4
+    restart: unless-stopped
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-logistimus}
       POSTGRES_USER: ${POSTGRES_USER:-logistimus}
@@ -19,6 +20,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
@@ -28,7 +30,9 @@ services:
       retries: 10
 
   minio:
-    image: minio/minio:latest
+    # Docker Hub removed minio/minio (2026); Quay hosts the current image.
+    image: quay.io/minio/aistor/minio
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-logistimus}
@@ -39,21 +43,26 @@ services:
     volumes:
       - miniodata:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      # curl liveness — `mc ready local` fails without an AIStor license
+      # (offline mode), while the health endpoint still answers 200.
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:9000/minio/health/live"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 15s
 
   api:
     build: .
+    restart: unless-stopped
     command: uv run uvicorn config.asgi:application --host 0.0.0.0 --port 8000
     env_file:
       - path: .env
         required: false
     environment:
+      # Dev stack runs dev settings explicitly (deploy compose pins prod).
+      DJANGO_SETTINGS_MODULE: config.settings.dev
       DATABASE_URL: postgres://${POSTGRES_USER:-logistimus}:${POSTGRES_PASSWORD:-logistimus-dev}@db:5432/${POSTGRES_DB:-logistimus}
       REDIS_URL: redis://redis:6379/0
-      CHANNEL_LAYER_URL: redis://redis:6379/1
       S3_ENDPOINT_URL: http://minio:9000
     ports:
       - "8000:8000"
@@ -62,6 +71,12 @@ services:
       # Container-owned venv: shadows the bind-mounted host .venv so
       # root `uv run` inside the container never rewrites host files.
       - venvdata:/app/.venv
+    healthcheck:
+      test: ["CMD", "uv", "run", "python", "healthcheck.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     depends_on:
       db:
         condition: service_healthy
@@ -70,11 +85,13 @@ services:
 
   worker:
     build: .
+    restart: unless-stopped
     command: uv run celery -A config worker -l info --concurrency 2
     env_file:
       - path: .env
         required: false
     environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
       DATABASE_URL: postgres://${POSTGRES_USER:-logistimus}:${POSTGRES_PASSWORD:-logistimus-dev}@db:5432/${POSTGRES_DB:-logistimus}
       REDIS_URL: redis://redis:6379/0
     volumes:
@@ -90,11 +107,13 @@ services:
 
   beat:
     build: .
+    restart: unless-stopped
     command: uv run celery -A config beat -l info
     env_file:
       - path: .env
         required: false
     environment:
+      DJANGO_SETTINGS_MODULE: config.settings.dev
       DATABASE_URL: postgres://${POSTGRES_USER:-logistimus}:${POSTGRES_PASSWORD:-logistimus-dev}@db:5432/${POSTGRES_DB:-logistimus}
       REDIS_URL: redis://redis:6379/0
     volumes:

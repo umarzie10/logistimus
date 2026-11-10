@@ -16,8 +16,17 @@ RUN uv sync --frozen --no-dev --no-install-project
 COPY . .
 RUN uv sync --frozen --no-dev
 
-# static collection for whitenoise (runs at build when possible; fallback at boot)
-RUN uv run manage.py collectstatic --noinput --settings=config.settings.prod || true
+# Static collection for whitenoise, under the real prod settings module.
+# prod.py fails closed at import (dev SECRET_KEY sentinel, non-postgres
+# DATABASE_URL, empty S3_ENDPOINT_URL), so build-only values are supplied
+# for this RUN step ONLY (not ENV — they must never persist into the runtime
+# image config): collectstatic never opens a DB/S3 connection, it only reads
+# settings. `|| true` is deliberately NOT used — a silent failure would ship
+# an image with empty staticfiles/ and 404 CSS in production.
+RUN SECRET_KEY=build-time-collectstatic-only-key-not-for-runtime-50chars-plus \
+    S3_ENDPOINT_URL=http://minio:9000 \
+    DATABASE_URL=postgres://build-only:build-only@localhost:5432/build_only \
+    uv run manage.py collectstatic --noinput --settings=config.settings.prod
 
 EXPOSE 8000
 CMD ["uv", "run", "uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000"]
