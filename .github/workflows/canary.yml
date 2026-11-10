@@ -1,0 +1,61 @@
+# Hourly external canary probe of a deployed Logistimus stack.
+#
+# OPT-IN: create a repository variable CANARY_URL pointing at the readiness
+# endpoint of the stack you want watched, e.g.
+#   CANARY_URL=https://api.<your-domain>/api/v1/health/ready/
+# While the variable is unset the probe job is skipped and a notice job
+# explains why (so the workflow never looks "broken" — it looks unconfigured).
+#
+# Limits, stated honestly (see MONITORING_READINESS.md §7):
+#   * a red run is only visible in the Actions tab — there is NO alerting yet
+#   * GitHub disables scheduled workflows after 60 days without repo activity
+#   * this probes ONE url; point it at /health/ready/ to also cover DB + Redis
+
+name: Canary
+
+on:
+  schedule:
+    - cron: "7 * * * *" # hourly at :07 UTC, off the hour
+  workflow_dispatch:
+    inputs:
+      canary_url:
+        description: "Override CANARY_URL for this run (defaults to the repo variable)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    if: vars.CANARY_URL != '' || inputs.canary_url != ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Probe canary URL
+        env:
+          CANARY_URL: ${{ inputs.canary_url || vars.CANARY_URL }}
+        run: |
+          case "$CANARY_URL" in
+            http://*|https://*) ;;
+            *) echo "::error::CANARY_URL must be an http(s) URL"; exit 1 ;;
+          esac
+          code=$(curl -sS -o /tmp/canary-body -w '%{http_code}' \
+                  --max-time 30 --retry 2 --retry-delay 5 "$CANARY_URL" || echo 000)
+          echo "GET $CANARY_URL -> HTTP $code"
+          head -c 2000 /tmp/canary-body; echo
+          if [ "$code" != "200" ]; then
+            echo "::error::canary failed: HTTP $code (expected 200)"
+            exit 1
+          fi
+
+  not-configured:
+    if: vars.CANARY_URL == '' && inputs.canary_url == ''
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Notice — canary disabled
+        run: |
+          echo "CANARY_URL is not set — canary probe skipped."
+          echo "Set it (repository variable) to a readiness URL to enable hourly probing."
+          echo "See docs/production/MONITORING_READINESS.md §7."

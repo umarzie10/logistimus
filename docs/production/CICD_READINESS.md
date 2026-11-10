@@ -38,7 +38,9 @@ npm audit --audit-level=high           → 0 high/critical (7 moderate, dev-only
    DRF 3.15.2 that no CI step would have caught (only frontend had an audit).
    Known CVEs now fail the backend build.
 2. **Explicit `permissions: contents: read`** added to all four workflows
-   (least privilege — none of them need write access).
+   (least privilege — none of them need write access). Since then two more
+   workflows landed (`backup.yml` Phase 7, `canary.yml` Phase 8) and both
+   declare it too — six for six.
 
 ### 1.1 CI gaps
 
@@ -182,11 +184,11 @@ HTTP 403: "Upgrade to GitHub Pro or make this repository public to enable this f
 | Check | Command | Result |
 |---|---|---|
 | Workflow YAML parses, no duplicate keys | `validate_wf.py` (duplicate-key-preserving loader) | `YAML OK` × 4 |
-| Embedded remote scripts are valid bash | `bash -n` on all 6 heredoc blocks | `bash -n OK` × 6 |
+| Embedded remote scripts are valid bash | `bash -n` on all 6 heredoc blocks (Phase 6; `backup.yml` added a 7th in Phase 7, also `bash -n` OK) | `bash -n OK` × 6 |
 | argv crossing ssh works | local `bash -s -- '<path>' '<ref>'` harness | `REPO_DIR=/opt/repo DEPLOY_REF=main`; empty path falls back to `$HOME/logistimus` (evaluated **remote-side**) |
 | Injection guard | char-class test | `main`, `release/1.2` → ACCEPT; `a;rm -rf /`, `a'b`, `$(id)`, `a b` → REJECT |
 | Host derivation from API URL | sed harness | `https://api.example.com/api/v1` → `api.example.com`; with port → host only; empty → caught by `[ -n ]` guard |
-| Least privilege | all four workflows declare `permissions:` | `YAML OK … (no missing-top-level-permissions issues)` |
+| Least privilege | all six workflows declare `permissions:` (four at Phase 6 + `backup.yml` + `canary.yml`) | `YAML OK … (no missing-top-level-permissions issues)` |
 | Nothing deployed | `gh run list` empty; no staging/production host contacted | **PASS** |
 
 ---

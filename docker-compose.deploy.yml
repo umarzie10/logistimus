@@ -18,6 +18,15 @@
 
 name: logistimus
 
+# Log rotation for EVERY service (Phase 8): the default json-file driver grows
+# without bound and would eventually fill the host disk. 3 x 10 MB per
+# container is enough to debug an incident and impossible to notice otherwise.
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgis/postgis:16-3.4
@@ -34,6 +43,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    logging: *default-logging
     networks: [logistimus]
     # intentionally no `ports:` — never expose Postgres on the host
 
@@ -48,6 +58,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+    logging: *default-logging
     networks: [logistimus]
     # intentionally no `ports:` — never expose Redis on the host
 
@@ -70,6 +81,7 @@ services:
       timeout: 5s
       retries: 10
       start_period: 15s
+    logging: *default-logging
     networks: [logistimus]
     # intentionally no `ports:` — object storage stays internal
 
@@ -100,12 +112,28 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    logging: *default-logging
     networks: [logistimus]
 
   worker:
     build: ./Backend
     restart: unless-stopped
     command: uv run celery -A config worker -l info --concurrency 2
+    healthcheck:
+      # Round-trip to THIS replica's worker: `celery inspect ping` broadcast
+      # reaches every worker on the shared broker, so `-d celery@$(hostname)`
+      # pins it to this container's own node (Docker sets hostname = container
+      # id, which is exactly the node name celery derives). Verified: rc=0 +
+      # "pong" with the worker up, "No nodes replied" + rc!=0 without one —
+      # even while ANOTHER worker on the same broker was alive.
+      # `uv run` because the venv bin/ is not on PATH in the image.
+      test:
+        - CMD-SHELL
+        - 'uv run celery -A config inspect ping -d "celery@$(hostname)" --timeout 5 2>/dev/null | grep -q pong'
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 40s
     env_file:
       - ./Backend/.env
     environment:
@@ -120,12 +148,34 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    logging: *default-logging
     networks: [logistimus]
 
   beat:
     build: ./Backend
     restart: unless-stopped
     command: uv run celery -A config beat -l info
+    healthcheck:
+      # beat has no network surface at all (it only schedules), so the only
+      # honest check is "is the beat process alive". python:3.12-slim ships
+      # no `ps`, so scan /proc directly; skip our own pid + shell (whose
+      # cmdline embeds this very script and would self-match).
+      test:
+        - CMD-SHELL
+        - |-
+          python -c "
+          import os,sys
+          skip={os.getpid(),os.getppid()}
+          for p in os.listdir('/proc'):
+              if not p.isdigit() or int(p) in skip: continue
+              try: c=open('/proc/%s/cmdline'%p,'rb').read()
+              except OSError: continue
+              if b'celery' in c and b'beat' in c: sys.exit(0)
+          sys.exit(1)"
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
     env_file:
       - ./Backend/.env
     environment:
@@ -139,6 +189,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    logging: *default-logging
     networks: [logistimus]
 
   frontend:
@@ -157,6 +208,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    logging: *default-logging
     networks: [logistimus]
 
   nginx:
@@ -165,6 +217,14 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    healthcheck:
+      # Probes the /nginx-health location added to infrastructure/nginx/nginx.conf
+      # (plain HTTP on :80, no TLS, no upstream dependency, never logged).
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1/nginx-health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       # :z (shared SELinux label) — both dev and deploy stacks may mount these;
       # :Z would make the label private to one container and break the other.
@@ -179,6 +239,7 @@ services:
         condition: service_healthy
       frontend:
         condition: service_healthy
+    logging: *default-logging
     networks: [logistimus]
 
 networks:
