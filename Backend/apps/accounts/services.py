@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import logging
+import re
 import secrets
 from datetime import UTC, timedelta
 from datetime import datetime as dt_datetime
@@ -61,6 +62,14 @@ EMAIL_LOGIN_LIMIT = 10
 EMAIL_LOGIN_WINDOW = timedelta(minutes=15)
 
 VALID_TIERS = ("starter", "growth", "enterprise")
+VALID_COMPANY_TYPES = (
+    "Freight Forwarder",
+    "Logistics Company",
+    "Warehouse",
+    "Distributor",
+    "Manufacturer",
+    "Other",
+)
 FLEET_BAND_MAP = {
     "10 – 50 Vehicles": "10-50",
     "50 – 200 Vehicles": "50-200",
@@ -264,6 +273,11 @@ def register(data: dict, request=None) -> dict:
         ) from exc
     if len(password) < 8:
         raise ApiError("weak_password", "Password must be at least 8 characters.")
+
+    confirm_pass = data.get("confirmPassword") or data.get("confirm_password")
+    if confirm_pass is not None and confirm_pass != password:
+        raise ApiError("password_mismatch", "Passwords do not match.")
+
     if not data.get("acceptTerms"):
         raise ApiError("terms_required", "You must accept the terms to continue.")
     tier = data.get("tier") or "starter"
@@ -272,10 +286,42 @@ def register(data: dict, request=None) -> dict:
     if User.objects.filter(email=email).exists():
         raise ApiError("email_exists", "An account with this email already exists.")
 
-    name = data["companyName"].strip()
-    fleet_band = FLEET_BAND_MAP.get(data.get("fleetSize", ""), "")
-    full_name = data.get("adminFullName", "").strip()
-    first_name, _, last_name = full_name.partition(" ")
+    name = (data.get("companyName") or data.get("company_name") or "").strip()
+    if not name:
+        raise ApiError(
+            "validation_error",
+            "Company name is required.",
+            details={"field": "companyName"},
+        )
+
+    fleet_band = FLEET_BAND_MAP.get(data.get("fleetSize", "") or data.get("fleet_size", ""), "")
+
+    first_name = (data.get("firstName") or data.get("first_name") or "").strip()
+    last_name = (data.get("lastName") or data.get("last_name") or "").strip()
+    if not first_name and not last_name:
+        full_name = (data.get("adminFullName") or data.get("full_name") or "").strip()
+        first_name, _, last_name = full_name.partition(" ")
+
+    phone = (data.get("phone") or data.get("businessPhone") or "").strip()
+    if phone:
+        digits_only = re.sub(r"[^\d]", "", phone)
+        if len(digits_only) < 7 or len(phone) > 32:
+            raise ApiError(
+                "invalid_phone",
+                "Please enter a valid phone number with country code (e.g. +1 555 123 4567).",
+            )
+
+    company_type = (data.get("companyType") or data.get("company_type") or "").strip()
+    if company_type and company_type not in VALID_COMPANY_TYPES:
+        raise ApiError(
+            "invalid_company_type",
+            f"Company type must be one of: {', '.join(VALID_COMPANY_TYPES)}.",
+        )
+
+    country = (data.get("country") or "").strip()
+    website = (data.get("website") or "").strip()
+    if website and len(website) > 255:
+        raise ApiError("invalid_website", "Company website URL cannot exceed 255 characters.")
 
     now = timezone.now()
     with transaction.atomic():
@@ -284,11 +330,12 @@ def register(data: dict, request=None) -> dict:
             password=password,
             first_name=first_name,
             last_name=last_name.strip(),
-            phone=data.get("businessPhone", "").strip(),
+            phone=phone,
         )
         org = Organization.objects.create(
             name=name,
             slug=_unique_slug(name),
+            headquarters_address=country,
             fleet_size_band=fleet_band,
             trial_ends_at=now + timedelta(days=14),
         )
@@ -300,7 +347,17 @@ def register(data: dict, request=None) -> dict:
             is_primary=True,
         )
         perm_services.seed_builtin_roles(org)
-        org_services.get_or_create_settings(org.id)
+        settings_obj = org_services.get_or_create_settings(org.id)
+        if company_type or website or country:
+            flags = dict(settings_obj.feature_flags or {})
+            if company_type:
+                flags["company_type"] = company_type
+            if website:
+                flags["website"] = website
+            if country:
+                flags["country"] = country
+            settings_obj.feature_flags = flags
+            settings_obj.save(update_fields=["feature_flags"])
 
         # Owner membership: role lookup scoped to this org context.
         owner = Role.objects.get(name="owner")
@@ -317,7 +374,12 @@ def register(data: dict, request=None) -> dict:
             organization_id=org.id,
             actor=user,
             actor_email=user.email,
-            after={"email": user.email, "tier": tier},
+            after={
+                "email": user.email,
+                "tier": tier,
+                "company_type": company_type or "unspecified",
+                "country": country or "unspecified",
+            },
         )
 
     cooldown = _cooldown_remaining(email)

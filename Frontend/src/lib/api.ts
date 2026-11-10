@@ -158,8 +158,14 @@ export interface RegisterRequest {
   companyName: string;
   email: string;
   password: string;
+  confirmPassword?: string;
+  firstName?: string;
+  lastName?: string;
   full_name?: string;
   phone?: string;
+  country?: string;
+  companyType?: string;
+  website?: string;
   acceptTerms?: boolean;
   tier?: string;
 }
