@@ -111,10 +111,23 @@ jobs:
           cd "$REPO_DIR"
           [ -f .env ] || { echo "::error::compose env missing: $REPO_DIR/.env — copy .env.example and fill it in"; exit 1; }
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          pg_user=$(sed -n 's/^POSTGRES_USER=//p' .env | head -1); pg_user="${pg_user:-logistimus}"
+          pg_db=$(sed -n 's/^POSTGRES_DB=//p' .env | head -1); pg_db="${pg_db:-logistimus}"
+          mkdir -p backups
+          # Same naming scheme as backup.sh so retention applies to it too
+          # (otherwise pre-deploy dumps would accumulate forever).
+          dump="backups/logistimus-predeploy-$stamp.dump"
           docker compose -f docker-compose.deploy.yml exec -T db \
-            pg_dump -U "${POSTGRES_USER:-logistimus}" -d "${POSTGRES_DB:-logistimus}" -Fc \
-            > "pre-deploy-$stamp.dump"
-          echo "backup: pre-deploy-$stamp.dump ($(du -h pre-deploy-$stamp.dump | cut -f1))"
+            pg_dump -U "$pg_user" -d "$pg_db" -Fc > "$dump"
+          # Prove the archive is readable BEFORE anyone relies on it later.
+          toc=$(docker compose -f docker-compose.deploy.yml exec -T db \
+            pg_restore --list < "$dump" | wc -l | tr -d ' ')
+          if [ ! -s "$dump" ] || [ "$toc" -lt 20 ]; then
+            echo "::error::pre-deploy backup is empty or unreadable (toc=$toc) — aborting deploy"
+            rm -f "$dump"
+            exit 1
+          fi
+          echo "backup: $dump ($(du -h "$dump" | cut -f1), toc=$toc lines)"
           REMOTE
 
       - name: Deploy

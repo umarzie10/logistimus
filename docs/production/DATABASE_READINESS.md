@@ -182,8 +182,8 @@ $ curl -sk --resolve api.logistimus.example.com:8443:127.0.0.1 \
 
 | Check | Status | Evidence |
 |---|---|---|
-| Backup tooling in repo | **NOT_CONFIGURED** at Phase 4 | `pg_dump -Fc` pre-deploy backup step added to `.github/workflows/deploy-production.yml`; scheduled backups + retention are Phase 7 |
-| Restore tested end-to-end | **BLOCKED** until Phase 7 | Rule: *a backup is invalid until a restore test succeeds in isolation* |
+| Backup tooling in repo | **PASS (Phase 7)** | `infrastructure/backup/backup.sh` — `pg_dump -Fc` + archive validation + 14-day retention; `.github/workflows/backup.yml` runs it nightly 03:17 UTC on the host; pre-deploy dump kept in `.github/workflows/deploy-production.yml` (now validated + retention-scoped). Evidence: `docs/production/BACKUP_RECOVERY.md` §4 |
+| Restore tested end-to-end | **PASS (Phase 7)** | `infrastructure/backup/restore-test.sh` on a virgin throwaway container: 26/26 tables, 8808/8808 rows, 249/249 TOC entries, `RESTORE_TEST_PASS`, 10 s. Full output in `BACKUP_RECOVERY.md` §5 |
 | Volume present & named | **PASS** | Named volume `pgdata:/var/lib/postgresql/data` — survives container replacement |
 
 ---
@@ -193,7 +193,7 @@ $ curl -sk --resolve api.logistimus.example.com:8443:127.0.0.1 \
 | # | Item | Status | Notes |
 |---|---|---|---|
 | 1 | No connection pooler (PgBouncer) | `NOT_CONFIGURED` | Fine for single-node; `CONN_MAX_AGE=60` keeps connections bounded. Re-evaluate before horizontal scaling of `api`/`worker`. |
-| 2 | No WAL archiving / PITR | `NOT_CONFIGURED` | Phase 7 delivers `DISASTER_RECOVERY.md`; RPO depends on the backup cadence defined there. |
+| 2 | No WAL archiving / PITR | `NOT_CONFIGURED` | Phase 7 set the backup cadence (daily + pre-deploy); without WAL there is **no point-in-time recovery** — worst case loses up to 24 h. See `BACKUP_RECOVERY.md` §7 for RPO/RTO. |
 | 3 | DB TLS not enforced | `NOT_CONFIGURED` | Acceptable while DB stays on the isolated container network. |
 | 4 | Encryption at rest | `NOT_VERIFIED` | Host/volume-level; must be confirmed with the infrastructure owner before production. |
 | 5 | `db` has no healthcheck-dependent app startup for `migrate` | **PASS (by design)** | `api` waits for `service_healthy` on db+redis; migrate runs as an explicit deploy step, not at container start — prevents a race where multiple replicas migrate simultaneously. |
@@ -211,7 +211,9 @@ instance, including a from-scratch deploy-stack migration. The one defect
 found (E001 deadlocking fresh installs) was root-caused, fixed with minimal
 blast radius, and locked in with regression tests.
 
-Open items are operational (backups/PITR → Phase 7, TLS/encryption posture)
-rather than schema defects; none of them blocks a staging deployment, and
-each carries an explicit status in §8 and in
-`docs/production/PRODUCTION_READINESS_REPORT.md`.
+Open items are operational (PITR/off-host copy → `BACKUP_RECOVERY.md` §8,
+TLS/encryption posture) rather than schema defects; none of them blocks a
+staging deployment, and each carries an explicit status in §8 and in
+`docs/production/PRODUCTION_READINESS_REPORT.md`. Backup and restore — the
+items this document explicitly deferred to Phase 7 — are now PASS with
+measured evidence (`BACKUP_RECOVERY.md` §4–§5).

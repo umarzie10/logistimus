@@ -50,3 +50,8 @@ Backend/db.sqlite3
 Backend/.pytest_cache/
 Backend/.ruff_cache/
 *.egg-info/
+
+# Backups (pg_dump output — never commit database dumps)
+backups/
+*.dump
+pre-deploy-*.dump

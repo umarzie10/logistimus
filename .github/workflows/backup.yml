@@ -1,0 +1,96 @@
+# Nightly database backup on the production host, with a RESTORE TEST of the
+# dump it just produced (a backup is invalid until a restore succeeds in
+# isolation — docs/production/DATABASE_READINESS.md §18, BACKUP_RECOVERY.md §5).
+#
+# Runs entirely on the host over ssh: it executes
+#   infrastructure/backup/backup.sh            (pg_dump -Fc + retention)
+#   infrastructure/backup/restore-test.sh      (throwaway container + checks)
+# and never modifies the running stack. No environment approval is requested
+# on purpose: this job is read-only with respect to production (it only reads
+# the database), so requiring a reviewer nightly would just get the rule
+# disabled. Secrets are the same repository secrets the deploy uses.
+#
+# NOTE (GitHub platform limits, see CICD_READINESS.md §1.1):
+#   * scheduled workflows only run once the workflow file is pushed
+#   * GitHub disables schedules after 60 days without repository activity
+#   * a red run is only visible in the Actions tab — there is NO alerting yet
+#     (MONITORING_READINESS.md gap)
+
+name: Backup & Restore Test
+
+on:
+  schedule:
+    - cron: "17 3 * * *" # daily 03:17 UTC, off the hour to be a good citizen
+  workflow_dispatch:
+    inputs:
+      run_restore_test:
+        description: "Restore the fresh dump into a throwaway container"
+        type: choice
+        options: ["true", "false"]
+        default: "true"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup-production
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Configure SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          grep -q . ~/.ssh/known_hosts || { echo "::error::ssh-keyscan found no host key for ${{ secrets.PROD_HOST }}:${{ secrets.PROD_PORT }}"; exit 1; }
+
+      - name: Backup + restore verification (on host)
+        env:
+          DEPLOY_PATH: ${{ vars.PROD_DEPLOY_PATH }}
+          # schedule has no inputs -> default to running the restore test
+          RUN_RESTORE_TEST: ${{ inputs.run_restore_test || 'true' }}
+        run: |
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::PROD_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
+          if [ "$RUN_RESTORE_TEST" != "true" ] && [ "$RUN_RESTORE_TEST" != "false" ]; then
+            echo "::error::run_restore_test must be true or false"
+            exit 1
+          fi
+          ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            "bash -s -- '$DEPLOY_PATH' '$RUN_RESTORE_TEST'" <<'REMOTE'
+          set -euo pipefail
+          REPO_DIR="${1:-$HOME/logistimus}"
+          RUN_TEST="$2"
+          cd "$REPO_DIR"
+          [ -f .env ] || { echo "::error::compose env missing: $REPO_DIR/.env — copy .env.example and fill it in"; exit 1; }
+          # Backend/.env is deliberately NOT required: backup.sh only talks to
+          # the `db` service through compose interpolation of the root env.
+
+          # --- backup (pg_dump -Fc + validation + retention) --------------
+          out=$(bash infrastructure/backup/backup.sh 2>&1) || { echo "$out"; echo "::error::backup.sh failed"; exit 1; }
+          echo "$out"
+          echo "$out" | grep -q 'BACKUP_OK' || { echo "::error::backup.sh produced no BACKUP_OK line"; exit 1; }
+
+          # --- restore test of that very dump ----------------------------
+          if [ "$RUN_TEST" != "true" ]; then
+            echo "restore test skipped (run_restore_test=$RUN_TEST)"
+            exit 0
+          fi
+          dump=$(ls -t backups/*.dump 2>/dev/null | head -1)
+          [ -n "$dump" ] || { echo "::error::no dump found in $REPO_DIR/backups"; exit 1; }
+          src_db=$(sed -n 's/^POSTGRES_DB=//p' .env | head -1); src_db="${src_db:-logistimus}"
+          src_user=$(sed -n 's/^POSTGRES_USER=//p' .env | head -1); src_user="${src_user:-logistimus}"
+          src_id=$(docker compose -f docker-compose.deploy.yml ps -q db)
+          [ -n "$src_id" ] || { echo "::error::compose db service is not running"; exit 1; }
+          echo "restore-testing $dump against container $src_id"
+          SOURCE_DB="$src_db" SOURCE_USER="$src_user" \
+            bash infrastructure/backup/restore-test.sh "$dump" "$src_id"
+          REMOTE
