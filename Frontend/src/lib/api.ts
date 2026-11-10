@@ -130,6 +130,14 @@ export interface MembershipItem {
   is_current: boolean;
 }
 
+/** Row of GET /organizations/current/members/ (backend `membership_row`). */
+export interface OrgMemberRow {
+  user: { id: string; name: string; email: string };
+  role: string;
+  status: string;
+  last_login_at: string | null;
+}
+
 export interface AuthResponse {
   access: string;
   expires_in: number;
@@ -303,7 +311,7 @@ async function request<T>(
     return null as unknown as T;
   }
 
-  let data: any = null;
+  let data: unknown = null;
   const contentType = response.headers.get("content-type") || "";
   if (contentType.includes("application/json")) {
     try {
@@ -331,11 +339,21 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    const errorBody = data?.error || {};
+    const errorBody =
+      (data as
+        | {
+            error?: {
+              code?: string;
+              message?: string;
+              details?: Record<string, unknown> | null;
+              request_id?: string;
+            };
+          }
+        | null)?.error || {};
     throw new ApiError({
       code: errorBody.code || "unknown_error",
       message: errorBody.message || response.statusText || "An unexpected error occurred.",
-      details: errorBody.details || null,
+      details: errorBody.details ?? null,
       request_id: errorBody.request_id || response.headers.get("x-request-id") || undefined,
       status: response.status,
     });
@@ -457,8 +475,8 @@ export const organizationApi = {
     return api.get<{ count: number; results: BranchItem[] }>("/organizations/current/branches/");
   },
 
-  async getMembers(page = 1): Promise<PaginatedResponse<any>> {
-    return api.get<PaginatedResponse<any>>(`/organizations/current/members/?page=${page}`);
+  async getMembers(page = 1): Promise<PaginatedResponse<OrgMemberRow>> {
+    return api.get<PaginatedResponse<OrgMemberRow>>(`/organizations/current/members/?page=${page}`);
   },
 
   async getApiKeys(): Promise<{ results: ApiKeyItem[] }> {

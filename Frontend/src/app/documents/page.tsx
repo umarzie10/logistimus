@@ -190,7 +190,7 @@ export default function DocumentsPage() {
                   <label className="block font-semibold text-[#061336] mb-1">Document Category</label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value as any)}
+                    onChange={(e) => setCategory(e.target.value as DocumentItem["category"])}
                     className="w-full p-2.5 rounded-input border border-[#CFDBEE] bg-white"
                   >
                     <option value="CMR / Bill of Lading">CMR / Bill of Lading</option>

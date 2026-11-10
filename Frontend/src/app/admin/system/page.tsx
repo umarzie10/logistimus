@@ -9,21 +9,23 @@ export default function AdminSystemPage() {
   const [health, setHealth] = useState<PlatformSystemHealthResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadHealth() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await platformApi.getSystemHealth();
-      setHealth(data);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Failed to fetch system telemetry.");
-      }
-    } finally {
-      setLoading(false);
-    }
+  function loadHealth(): Promise<void> {
+    return platformApi
+      .getSystemHealth()
+      .then((data) => {
+        setHealth(data);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Failed to fetch system telemetry.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -41,7 +43,10 @@ export default function AdminSystemPage() {
         </div>
         <button
           type="button"
-          onClick={loadHealth}
+          onClick={() => {
+            setLoading(true);
+            loadHealth();
+          }}
           disabled={loading}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E2F76]/40 hover:bg-[#0E2F76] text-xs text-[#A9C0E0] hover:text-white border border-[#2a4a8e] transition-colors"
         >

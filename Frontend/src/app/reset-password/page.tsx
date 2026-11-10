@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, type FormEvent } from "react";
+import { useState, Suspense, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -18,12 +18,6 @@ function ResetPasswordForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (queryToken && !token) {
-      setToken(queryToken);
-    }
-  }, [queryToken, token]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();

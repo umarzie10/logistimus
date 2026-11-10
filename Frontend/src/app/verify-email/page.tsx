@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -19,12 +19,6 @@ function VerifyEmailForm() {
   const [resending, setResending] = useState(false);
   const [resendNotice, setResendNotice] = useState("");
   const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (initialEmail && !email) {
-      setEmail(initialEmail);
-    }
-  }, [initialEmail, email]);
 
   const handleChange = (index: number, val: string) => {
     if (val.length > 1) val = val.slice(-1);

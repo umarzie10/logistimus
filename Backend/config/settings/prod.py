@@ -61,8 +61,15 @@ DATABASES["default"].update(
 LOGGING["root"]["level"] = "INFO"  # noqa: F405
 LOGGING["handlers"]["console"]["formatter"] = "json"  # noqa: F405
 
-# Password hashing hardening (PBKDF2 iterations are Django defaults; no MD5) ---
-# Refuse to boot with the dev secret
+# Refuse to boot with the dev secret.
+# base.py's sentinel check cannot fire here: it runs while DEBUG still holds
+# its env default (True) — prod.py only forces DEBUG=False after the import.
+# The previous assert compared a different (shorter) string than
+# DEV_KEY_SENTINEL, so it never matched either. Compare the real sentinel.
+if SECRET_KEY == DEV_KEY_SENTINEL:  # noqa: F405
+    raise RuntimeError("SECRET_KEY must be set to a real value in production")
+
+# Also reject the short placeholder that appears in older docs/examples.
 assert SECRET_KEY != "unsafe-dev-key-change-me", "Set SECRET_KEY"  # noqa: F405
 
 # Error reporting (env-driven, optional) ---------------------------------------

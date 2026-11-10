@@ -33,30 +33,30 @@ export default function DashboardPage() {
   const [membersCount, setMembersCount] = useState(0);
   const [apiKeys, setApiKeys] = useState<ApiKeyItem[]>([]);
 
-  async function loadDashboardData() {
-    setLoading(true);
-    try {
-      const [sessionData, branchesData, membersData, keysData] = await Promise.all([
-        authApi.session().catch(() => null),
-        organizationApi.getBranches().catch(() => ({ count: 0, results: [] })),
-        organizationApi.getMembers(1).catch(() => ({ count: 0, results: [] })),
-        organizationApi.getApiKeys().catch(() => ({ results: [] })),
-      ]);
-
-      if (sessionData?.organization) {
-        setOrg(sessionData.organization);
-      }
-      if (sessionData?.user) {
-        setUser(sessionData.user);
-      }
-      setBranches(branchesData?.results || []);
-      setMembersCount(membersData?.count || (membersData?.results ? membersData.results.length : 0));
-      setApiKeys(keysData?.results || []);
-    } catch {
-      // Fallback gracefully
-    } finally {
-      setLoading(false);
-    }
+  function loadDashboardData(): Promise<void> {
+    return Promise.all([
+      authApi.session().catch(() => null),
+      organizationApi.getBranches().catch(() => ({ count: 0, results: [] })),
+      organizationApi.getMembers(1).catch(() => ({ count: 0, results: [] })),
+      organizationApi.getApiKeys().catch(() => ({ results: [] })),
+    ])
+      .then(([sessionData, branchesData, membersData, keysData]) => {
+        if (sessionData?.organization) {
+          setOrg(sessionData.organization);
+        }
+        if (sessionData?.user) {
+          setUser(sessionData.user);
+        }
+        setBranches(branchesData?.results || []);
+        setMembersCount(membersData?.count || (membersData?.results ? membersData.results.length : 0));
+        setApiKeys(keysData?.results || []);
+      })
+      .catch(() => {
+        // Fallback gracefully
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -88,7 +88,10 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={loadDashboardData}
+              onClick={() => {
+                setLoading(true);
+                loadDashboardData();
+              }}
               disabled={loading}
               className="px-3.5 py-2 rounded-full border border-[#CFDBEE] hover:bg-[#F4FEFF] text-[#061336] text-xs font-medium transition-colors inline-flex items-center gap-1.5"
             >

@@ -10,21 +10,23 @@ export default function AdminOrganizationsPage() {
   const [error, setError] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  async function loadOrgs() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await platformApi.getOrganizations(1);
-      setOrgs(data?.results || []);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Failed to fetch organizations list.");
-      }
-    } finally {
-      setLoading(false);
-    }
+  function loadOrgs(): Promise<void> {
+    return platformApi
+      .getOrganizations(1)
+      .then((data) => {
+        setOrgs(data?.results || []);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Failed to fetch organizations list.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   async function toggleStatus(org: PlatformOrgItem) {
@@ -79,7 +81,10 @@ export default function AdminOrganizationsPage() {
         </div>
         <button
           type="button"
-          onClick={loadOrgs}
+          onClick={() => {
+            setLoading(true);
+            loadOrgs();
+          }}
           disabled={loading}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E2F76]/40 hover:bg-[#0E2F76] text-xs text-[#A9C0E0] hover:text-white border border-[#2a4a8e] transition-colors"
         >

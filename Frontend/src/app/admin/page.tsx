@@ -26,25 +26,23 @@ export default function AdminOverviewPage() {
   const [recentOrgs, setRecentOrgs] = useState<PlatformOrgItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadData() {
-    setLoading(true);
-    setError(null);
-    try {
-      const [overviewData, orgsData] = await Promise.all([
-        platformApi.getOverview(),
-        platformApi.getOrganizations(1),
-      ]);
-      setOverview(overviewData);
-      setRecentOrgs(orgsData?.results || []);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Failed to fetch platform telemetry.");
-      }
-    } finally {
-      setLoading(false);
-    }
+  function loadData(): Promise<void> {
+    return Promise.all([platformApi.getOverview(), platformApi.getOrganizations(1)])
+      .then(([overviewData, orgsData]) => {
+        setOverview(overviewData);
+        setRecentOrgs(orgsData?.results || []);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Failed to fetch platform telemetry.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -71,7 +69,10 @@ export default function AdminOverviewPage() {
         </div>
         <button
           type="button"
-          onClick={loadData}
+          onClick={() => {
+            setLoading(true);
+            loadData();
+          }}
           disabled={loading}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E2F76]/40 hover:bg-[#0E2F76] text-xs text-[#A9C0E0] hover:text-white border border-[#2a4a8e] transition-colors"
         >

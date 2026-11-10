@@ -34,24 +34,25 @@ export default function SettingsPage() {
   const [newKeySecret, setNewKeySecret] = useState<string | null>(null);
   const [creatingKey, setCreatingKey] = useState(false);
 
-  async function loadData() {
-    setLoading(true);
-    try {
-      const [currentOrg, branchData, keysData] = await Promise.all([
-        organizationApi.getCurrent(),
-        organizationApi.getBranches(),
-        organizationApi.getApiKeys(),
-      ]);
-      setOrg(currentOrg);
-      setName(currentOrg.name || "");
-      setCurrency(currentOrg.base_currency || "USD");
-      setBranches(branchData.results || []);
-      setApiKeys(keysData.results || []);
-    } catch {
-      // Graceful fallback
-    } finally {
-      setLoading(false);
-    }
+  function loadData(): Promise<void> {
+    return Promise.all([
+      organizationApi.getCurrent(),
+      organizationApi.getBranches(),
+      organizationApi.getApiKeys(),
+    ])
+      .then(([currentOrg, branchData, keysData]) => {
+        setOrg(currentOrg);
+        setName(currentOrg.name || "");
+        setCurrency(currentOrg.base_currency || "USD");
+        setBranches(branchData.results || []);
+        setApiKeys(keysData.results || []);
+      })
+      .catch(() => {
+        // Graceful fallback
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -210,7 +211,7 @@ export default function SettingsPage() {
                   className="w-full p-2.5 rounded-input border border-[#CFDBEE] bg-[#ffffff] text-sm text-[#061336] focus:outline-none focus:border-[#0E2F76]"
                 >
                   <option value="USD">USD ($) - United States Dollar</option>
-                  <option value="UZS">UZS (so'm) - Uzbek Som</option>
+                  <option value="UZS">UZS (so&apos;m) - Uzbek Som</option>
                   <option value="EUR">EUR (€) - Euro</option>
                   <option value="KZT">KZT (₸) - Kazakhstani Tenge</option>
                 </select>

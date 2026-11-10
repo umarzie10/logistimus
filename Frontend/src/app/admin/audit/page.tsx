@@ -9,21 +9,23 @@ export default function AdminAuditPage() {
   const [logs, setLogs] = useState<PlatformAuditLogItem[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  async function loadLogs() {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await platformApi.getAuditLogs(1);
-      setLogs(data?.results || []);
-    } catch (err: unknown) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError("Failed to fetch system audit logs.");
-      }
-    } finally {
-      setLoading(false);
-    }
+  function loadLogs(): Promise<void> {
+    return platformApi
+      .getAuditLogs(1)
+      .then((data) => {
+        setLogs(data?.results || []);
+        setError(null);
+      })
+      .catch((err: unknown) => {
+        if (err instanceof ApiError) {
+          setError(err.message);
+        } else {
+          setError("Failed to fetch system audit logs.");
+        }
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }
 
   useEffect(() => {
@@ -41,7 +43,10 @@ export default function AdminAuditPage() {
         </div>
         <button
           type="button"
-          onClick={loadLogs}
+          onClick={() => {
+            setLoading(true);
+            loadLogs();
+          }}
           disabled={loading}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#0E2F76]/40 hover:bg-[#0E2F76] text-xs text-[#A9C0E0] hover:text-white border border-[#2a4a8e] transition-colors"
         >
