@@ -7,6 +7,10 @@ on:
   pull_request:
     paths: ["Backend/**", "infrastructure/**", ".github/workflows/backend.yml"]
 
+# Least privilege: CI only reads the checkout.
+permissions:
+  contents: read
+
 jobs:
   backend:
     runs-on: ubuntu-latest
@@ -41,6 +45,11 @@ jobs:
 
       - name: Lint (ruff)
         run: uv run ruff check .
+
+      # Known CVEs fail the build — the Phase 5 audit found the previous
+      # over-tight DRF pin hiding 5 advisories (docs/production/SECURITY_READINESS.md §8).
+      - name: Audit dependencies (known CVEs)
+        run: uv run pip-audit
 
       - name: Django system checks
         run: uv run manage.py check

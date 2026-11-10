@@ -6,12 +6,15 @@
 #
 # Required repository secrets:
 #   STAGING_SSH_KEY, STAGING_HOST, STAGING_USER, STAGING_PORT
-# Required repository variables:
-#   STAGING_POSTGRES_PASSWORD, STAGING_MINIO_ROOT_PASSWORD,
-#   STAGING_SECRET_KEY, STAGING_ALLOWED_HOSTS, STAGING_CORS_ORIGINS,
-#   STAGING_NEXT_PUBLIC_API_URL
+# Optional repository variable:
+#   STAGING_DEPLOY_PATH — checkout dir on the host (default $HOME/logistimus)
 #
-# This workflow NEVER touches production: it targets STAGING_HOST only.
+# The host must have, created once by an operator (both git-ignored):
+#   <checkout>/.env         — compose interpolation (POSTGRES_PASSWORD, …)
+#                             copy from .env.example
+#   <checkout>/Backend/.env — Django settings, copy from Backend/.env.example
+# This workflow never transmits secrets to the host: it only runs compose,
+# which reads those files itself. It NEVER touches production.
 
 name: Deploy Staging
 
@@ -19,6 +22,9 @@ on:
   push:
     branches: [develop]
   workflow_dispatch: {}
+
+permissions:
+  contents: read
 
 concurrency:
   group: deploy-staging
@@ -30,36 +36,38 @@ jobs:
     environment: staging
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.STAGING_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          echo "${{ secrets.STAGING_HOST }} $(cat /etc/hosts | awk '{print $1}' | grep -m1 .)" >> ~/.ssh/known_hosts 2>/dev/null || true
-          ssh-keyscan -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          grep -q . ~/.ssh/known_hosts || { echo "::error::ssh-keyscan found no host key for ${{ secrets.STAGING_HOST }}:${{ secrets.STAGING_PORT }}"; exit 1; }
 
-      - name: Deploy (build on host, migrate, restart)
+      - name: Deploy (fetch, build, migrate, restart)
         env:
-          POSTGRES_PASSWORD: ${{ vars.STAGING_POSTGRES_PASSWORD }}
-          MINIO_ROOT_PASSWORD: ${{ vars.STAGING_MINIO_ROOT_PASSWORD }}
-          SECRET_KEY: ${{ vars.STAGING_SECRET_KEY }}
-          ALLOWED_HOSTS: ${{ vars.STAGING_ALLOWED_HOSTS }}
-          CORS_ALLOWED_ORIGINS: ${{ vars.STAGING_CORS_ORIGINS }}
-          NEXT_PUBLIC_API_URL: ${{ vars.STAGING_NEXT_PUBLIC_API_URL }}
+          DEPLOY_PATH: ${{ vars.STAGING_DEPLOY_PATH }}
         run: |
+          # Path is the only value crossing into the remote script; keep it to
+          # a safe character class (no quotes/spaces/metacharacters).
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::STAGING_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
           ssh -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
-            'bash -s' <<'REMOTE'
+            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
           set -euo pipefail
-          cd "${REPO_DIR:-$HOME/logistimus}"
+          REPO_DIR="${1:-$HOME/logistimus}"
+          cd "$REPO_DIR"
+          [ -d .git ] || { echo "::error::no git checkout at $REPO_DIR — clone the repository there once"; exit 1; }
+          [ -f .env ] || { echo "::error::compose env missing: $REPO_DIR/.env — copy .env.example and fill it in"; exit 1; }
+          [ -f Backend/.env ] || { echo "::error::Django env missing: $REPO_DIR/Backend/.env — copy Backend/.env.example and fill it in"; exit 1; }
+
           git fetch --prune origin
           git reset --hard origin/develop
+          echo "deploying $(git log -1 --oneline)"
 
-          # .env is created once by an operator; refresh non-secret host config.
-          test -f Backend/.env || { echo "Backend/.env missing on staging host"; exit 1; }
-
-          export POSTGRES_PASSWORD MINIO_ROOT_PASSWORD NEXT_PUBLIC_API_URL
           docker compose -f docker-compose.deploy.yml pull || true
           docker compose -f docker-compose.deploy.yml build
           docker compose -f docker-compose.deploy.yml run --rm api \
@@ -69,15 +77,36 @@ jobs:
           REMOTE
 
       - name: Verify staging health
+        env:
+          DEPLOY_PATH: ${{ vars.STAGING_DEPLOY_PATH }}
         run: |
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::STAGING_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
           ssh -p "${{ secrets.STAGING_PORT }}" "${{ secrets.STAGING_USER }}@${{ secrets.STAGING_HOST }}" \
-            'bash -s' <<'REMOTE'
+            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
           set -euo pipefail
+          REPO_DIR="${1:-$HOME/logistimus}"
+          cd "$REPO_DIR"
+          # Probe with the Host the API vhost (and ALLOWED_HOSTS) actually
+          # uses — derived from the same NEXT_PUBLIC_API_URL the bundle was
+          # built with, so a config mismatch fails the deploy instead of
+          # silently probing the wrong server block.
+          api_url=$(sed -n 's/^NEXT_PUBLIC_API_URL=//p' .env | head -1)
+          api_host=$(printf '%s' "$api_url" | sed -E 's#^https?://([^/:]+).*#\1#')
+          [ -n "$api_host" ] || { echo "::error::NEXT_PUBLIC_API_URL missing from $REPO_DIR/.env"; exit 1; }
+
           for i in $(seq 1 30); do
-            code=$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/health/ready/ || true)
-            [ "$code" = "200" ] && { echo "staging ready: HTTP $code"; exit 0; }
+            code=$(curl -ks -o /dev/null -w '%{http_code}' -H "Host: $api_host" https://127.0.0.1/api/v1/health/ready/ || true)
+            if [ "$code" = "200" ]; then
+              echo "staging ready: HTTP 200 (Host: $api_host)"
+              docker compose -f docker-compose.deploy.yml ps
+              exit 0
+            fi
             sleep 5
           done
-          echo "staging readiness probe never returned 200"
+          docker compose -f docker-compose.deploy.yml ps
+          echo "::error::staging readiness probe never returned 200 (last: $code)"
           exit 1
           REMOTE

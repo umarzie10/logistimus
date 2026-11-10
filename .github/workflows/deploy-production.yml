@@ -1,4 +1,4 @@
-# Deploys main to the PRODUCTION host.
+# Deploys a chosen ref to the PRODUCTION host.
 #
 # TWO independent gates before anything runs:
 #   1. `environment: production` — GitHub environment protection rules
@@ -8,7 +8,22 @@
 #      must open Actions → Deploy Production → Run workflow and pick the ref.
 #
 # If the `production` environment has no required reviewers configured, the
-# workflow fails closed below instead of deploying unattended.
+# guard job fails closed below instead of deploying unattended.
+#
+# Required repository secrets: PROD_SSH_KEY, PROD_HOST, PROD_USER, PROD_PORT
+# Optional repository variable: PROD_DEPLOY_PATH (default $HOME/logistimus)
+#
+# Host-side configuration, created once by an operator (both git-ignored):
+#   <checkout>/.env         — compose interpolation (POSTGRES_PASSWORD, …)
+#                             copy from .env.example
+#   <checkout>/Backend/.env — Django settings, copy from Backend/.env.example
+# Secrets never transit GitHub Actions: the workflow only runs compose on the
+# host, and compose reads those files itself.
+#
+# Failure handling: the deploy step records the pre-deploy revision in
+# <checkout>/.deploy_prev BEFORE the reset; on failure the `rollback` job
+# resets the checkout back to it and restarts the stack (forward-only
+# migrations are NOT reversed — see docs/production/ROLLBACK_PLAN.md).
 
 name: Deploy Production
 
@@ -23,6 +38,10 @@ on:
         description: "Type the exact string DEPLOY PRODUCTION to confirm"
         required: true
 
+permissions:
+  contents: read
+  environments: read
+
 concurrency:
   group: deploy-production
   cancel-in-progress: false
@@ -31,14 +50,22 @@ jobs:
   guard:
     runs-on: ubuntu-latest
     environment: production
+
     steps:
       - name: Confirm the deploy was deliberate
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          DEPLOY_REF: ${{ inputs.ref }}
         run: |
-          if [ "${{ inputs.confirm }}" != "DEPLOY PRODUCTION" ]; then
+          if [ "$CONFIRM" != "DEPLOY PRODUCTION" ]; then
             echo "confirmation string did not match — aborting"
             exit 1
           fi
-          echo "confirmed for ref ${{ inputs.ref }}"
+          if ! [[ "$DEPLOY_REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::ref contains unsupported characters"
+            exit 1
+          fi
+          echo "confirmed for ref $DEPLOY_REF"
 
       - name: Require configured protection rules
         # Fail closed: without required reviewers on the `production`
@@ -60,26 +87,29 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.ref }}
-
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+          grep -q . ~/.ssh/known_hosts || { echo "::error::ssh-keyscan found no host key for ${{ secrets.PROD_HOST }}:${{ secrets.PROD_PORT }}"; exit 1; }
 
       - name: Back up database before touching anything
         env:
-          POSTGRES_PASSWORD: ${{ vars.PROD_POSTGRES_PASSWORD }}
+          DEPLOY_PATH: ${{ vars.PROD_DEPLOY_PATH }}
         run: |
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::PROD_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
           ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
-            'bash -s' <<'REMOTE'
+            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
           set -euo pipefail
-          cd "${REPO_DIR:-$HOME/logistimus}"
-          export POSTGRES_PASSWORD
+          REPO_DIR="${1:-$HOME/logistimus}"
+          cd "$REPO_DIR"
+          [ -f .env ] || { echo "::error::compose env missing: $REPO_DIR/.env — copy .env.example and fill it in"; exit 1; }
           stamp=$(date -u +%Y%m%dT%H%M%SZ)
           docker compose -f docker-compose.deploy.yml exec -T db \
             pg_dump -U "${POSTGRES_USER:-logistimus}" -d "${POSTGRES_DB:-logistimus}" -Fc \
@@ -89,56 +119,147 @@ jobs:
 
       - name: Deploy
         env:
-          POSTGRES_PASSWORD: ${{ vars.PROD_POSTGRES_PASSWORD }}
-          MINIO_ROOT_PASSWORD: ${{ vars.PROD_MINIO_ROOT_PASSWORD }}
-          NEXT_PUBLIC_API_URL: ${{ vars.PROD_NEXT_PUBLIC_API_URL }}
+          DEPLOY_REF: ${{ inputs.ref }}
+          DEPLOY_PATH: ${{ vars.PROD_DEPLOY_PATH }}
         run: |
+          if ! [[ "$DEPLOY_REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+            echo "::error::ref contains unsupported characters"
+            exit 1
+          fi
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::PROD_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
           ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
-            'bash -s' <<'REMOTE'
+            "bash -s -- '$DEPLOY_PATH' '$DEPLOY_REF'" <<'REMOTE'
           set -euo pipefail
-          cd "${REPO_DIR:-$HOME/logistimus}"
-          test -f Backend/.env || { echo "Backend/.env missing on production host"; exit 1; }
+          REPO_DIR="${1:-$HOME/logistimus}"
+          DEPLOY_REF="$2"
+          cd "$REPO_DIR"
+          [ -d .git ] || { echo "::error::no git checkout at $REPO_DIR — clone the repository there once"; exit 1; }
+          [ -f .env ] || { echo "::error::compose env missing: $REPO_DIR/.env — copy .env.example and fill it in"; exit 1; }
+          [ -f Backend/.env ] || { echo "::error::Django env missing: $REPO_DIR/Backend/.env — copy Backend/.env.example and fill it in"; exit 1; }
 
           git fetch --prune origin
+          # Reset to the FETCHED ref: `git reset --hard main` would resolve to
+          # the possibly-stale local branch, silently deploying old code.
+          if git show-ref --verify --quiet "refs/remotes/origin/$DEPLOY_REF"; then
+            target="origin/$DEPLOY_REF"
+          else
+            target="$DEPLOY_REF"
+          fi
           previous=$(git rev-parse HEAD)
-          git reset --hard "${DEPLOY_REF}"
-          echo "previous: $previous -> now: $(git rev-parse HEAD)"
+          # Rollback marker for the `rollback` job — written before the reset.
+          printf '%s\n' "$previous" > .deploy_prev
+          git reset --hard "$target"
+          echo "deploying: $previous -> $(git rev-parse HEAD) (target $target)"
 
-          export POSTGRES_PASSWORD MINIO_ROOT_PASSWORD NEXT_PUBLIC_API_URL
           docker compose -f docker-compose.deploy.yml build
           docker compose -f docker-compose.deploy.yml run --rm api \
             uv run manage.py migrate --noinput
           docker compose -f docker-compose.deploy.yml up -d
-          echo "PREVIOUS_SHA=$previous" >> "$GITHUB_ENV"
+          docker compose -f docker-compose.deploy.yml ps
           REMOTE
-        env:
-          DEPLOY_REF: ${{ inputs.ref }}
 
       - name: Verify production health
+        env:
+          DEPLOY_PATH: ${{ vars.PROD_DEPLOY_PATH }}
         run: |
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::PROD_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
           ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
-            'bash -s' <<'REMOTE'
+            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
           set -euo pipefail
+          REPO_DIR="${1:-$HOME/logistimus}"
+          cd "$REPO_DIR"
+          # Probe with the Host the API vhost (and ALLOWED_HOSTS) actually
+          # uses — derived from the same NEXT_PUBLIC_API_URL the bundle was
+          # built with, so a config mismatch fails the deploy instead of
+          # silently probing the wrong server block.
+          api_url=$(sed -n 's/^NEXT_PUBLIC_API_URL=//p' .env | head -1)
+          api_host=$(printf '%s' "$api_url" | sed -E 's#^https?://([^/:]+).*#\1#')
+          [ -n "$api_host" ] || { echo "::error::NEXT_PUBLIC_API_URL missing from $REPO_DIR/.env"; exit 1; }
+
           for i in $(seq 1 30); do
-            code=$(curl -ks -o /dev/null -w '%{http_code}' https://localhost/api/v1/health/ready/ || true)
-            [ "$code" = "200" ] && { echo "production ready: HTTP $code"; exit 0; }
+            code=$(curl -ks -o /dev/null -w '%{http_code}' -H "Host: $api_host" https://127.0.0.1/api/v1/health/ready/ || true)
+            if [ "$code" = "200" ]; then
+              echo "production ready: HTTP 200 (Host: $api_host)"
+              docker compose -f docker-compose.deploy.yml ps
+              # Deploy succeeded — drop the rollback marker.
+              rm -f .deploy_prev
+              exit 0
+            fi
             sleep 5
           done
-          echo "production readiness probe never returned 200"
+          docker compose -f docker-compose.deploy.yml ps
+          echo "::error::production readiness probe never returned 200 (last: $code)"
           exit 1
           REMOTE
 
+  # Runs only when the deploy job itself failed (guard failures leave the
+  # checkout untouched, so there is nothing to roll back). Requires a reviewer
+  # approval like any other production change — see ROLLBACK_PLAN.md §3.
   rollback:
     needs: deploy
-    if: failure()
+    if: failure() && needs.deploy.result == 'failure'
     runs-on: ubuntu-latest
     environment: production
+
     steps:
-      - name: Roll back to the previous revision
-        env:
-          PREVIOUS_SHA: ${{ needs.deploy.outputs.previous_sha }}
+      - name: Configure SSH
         run: |
-          echo "Deploy failed — manual rollback required."
-          echo "Previous revision: ${PREVIOUS_SHA:-unknown}"
-          echo "See docs/production/ROLLBACK_PLAN.md §3 (automated rollback)."
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.PROD_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Roll back to the pre-deploy revision
+        env:
+          DEPLOY_PATH: ${{ vars.PROD_DEPLOY_PATH }}
+        run: |
+          if [ -n "$DEPLOY_PATH" ] && ! [[ "$DEPLOY_PATH" =~ ^[A-Za-z0-9._/~-]+$ ]]; then
+            echo "::error::PROD_DEPLOY_PATH contains unsupported characters"
+            exit 1
+          fi
+          ssh -p "${{ secrets.PROD_PORT }}" "${{ secrets.PROD_USER }}@${{ secrets.PROD_HOST }}" \
+            "bash -s -- '$DEPLOY_PATH'" <<'REMOTE'
+          set -euo pipefail
+          REPO_DIR="${1:-$HOME/logistimus}"
+          cd "$REPO_DIR"
+          prev=$(cat .deploy_prev 2>/dev/null || true)
+          if [ -z "$prev" ]; then
+            echo "No rollback marker (.deploy_prev): the deploy failed BEFORE"
+            echo "changing the checkout — the host still runs the old revision."
+            echo "Nothing to roll back."
+            exit 0
+          fi
+          current=$(git rev-parse HEAD)
+          if [ "$prev" = "$current" ]; then
+            echo "HEAD already at the pre-deploy revision $prev — nothing to roll back."
+            rm -f .deploy_prev
+            exit 0
+          fi
+          echo "rolling back: $current -> $prev"
+          git reset --hard "$prev"
+          # Forward-only migrations are NOT reversed here — see ROLLBACK_PLAN.md.
+          docker compose -f docker-compose.deploy.yml build
+          docker compose -f docker-compose.deploy.yml up -d
+
+          api_url=$(sed -n 's/^NEXT_PUBLIC_API_URL=//p' .env | head -1)
+          api_host=$(printf '%s' "$api_url" | sed -E 's#^https?://([^/:]+).*#\1#')
+          for i in $(seq 1 20); do
+            code=$(curl -ks -o /dev/null -w '%{http_code}' -H "Host: $api_host" https://127.0.0.1/api/v1/health/ready/ || true)
+            if [ "$code" = "200" ]; then
+              echo "rolled back to $prev and healthy (HTTP 200)"
+              rm -f .deploy_prev
+              exit 0
+            fi
+            sleep 5
+          done
+          docker compose -f docker-compose.deploy.yml ps
+          echo "::error::rollback applied ($current -> $prev) but health probe never returned 200 (last: $code)"
           exit 1
+          REMOTE
