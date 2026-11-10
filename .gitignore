@@ -20,11 +20,10 @@ coverage/
 .playwright-mcp/
 *.tmp
 
-# Environment Variables
-.env
-.env*.local
-.env.production
-.env.development
+# Environment Variables — ignore every env file except the committed templates
+.env*
+!.env.example
+!.env.*.example
 
 # Vercel
 .vercel

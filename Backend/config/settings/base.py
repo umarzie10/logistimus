@@ -31,6 +31,12 @@ env = environ.Env(
     S3_USE_SSL=(bool, True),
     EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
     DEFAULT_FROM_EMAIL=(str, "Logistimus <no-reply@logistimus.local>"),
+    EMAIL_HOST=(str, ""),
+    EMAIL_PORT=(int, 587),
+    EMAIL_HOST_USER=(str, ""),
+    EMAIL_HOST_PASSWORD=(str, ""),
+    EMAIL_USE_TLS=(bool, True),
+    EMAIL_TIMEOUT=(int, 30),
     FRONTEND_URL=(str, "http://localhost:3000"),
     REFRESH_COOKIE_PATH=(str, "/api/v1/auth/"),
     AI_PROVIDER=(str, ""),
@@ -286,6 +292,13 @@ CSRF_TRUSTED_ORIGINS = [o for o in CORS_ALLOWED_ORIGINS if o.startswith("https:/
 EMAIL_BACKEND = env("EMAIL_BACKEND")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 FRONTEND_URL = env("FRONTEND_URL")
+# SMTP connection (only used when EMAIL_BACKEND is the SMTP backend; staging/prod)
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env.int("EMAIL_PORT")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT")
 # Refresh cookie is scoped to the auth router only (SECURITY_PLAN §4).
 REFRESH_COOKIE_PATH = env("REFRESH_COOKIE_PATH")
 
