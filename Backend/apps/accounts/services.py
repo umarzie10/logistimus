@@ -183,15 +183,39 @@ def _pick_membership(user) -> Membership:
     Deterministic (oldest membership wins) so a fresh login always lands in
     the org created at registration; afterwards the refresh token pins the
     active org and switch-organization changes it explicitly.
+
+    The RLS policy on `organizations_membership` allows a row to be read
+    when `app.user_id` matches the row's own user_id (the `user_column`
+    clause in apps.core.db.enable_rls). The user id therefore has to be set
+    as the session GUC BEFORE the membership is read — otherwise the
+    database hides every membership and login fails with
+    "not attached to an active organization".
+
+    `permissions_role` is also RLS-protected and its policy only allows the
+    org's own rows, so the role is fetched AFTER the org context is set —
+    otherwise the joined role row is invisible (DoesNotExist) even though
+    the membership itself was readable.
     """
-    membership = (
-        Membership.unscoped.filter(user=user, status=Membership.Status.ACTIVE)
-        .select_related("organization", "role")
-        .order_by("joined_at")
-        .first()
-    )
-    if membership is None or not membership.organization.is_active:
-        raise ApiError("forbidden", "Your account is not attached to an active organization.")
+    with transaction.atomic():
+        db.set_user_context(user.id)
+        membership = (
+            Membership.unscoped.filter(user=user, status=Membership.Status.ACTIVE)
+            .select_related("organization")
+            .order_by("joined_at")
+            .first()
+        )
+        if membership is None:
+            raise ApiError("forbidden", "Your account is not attached to an active organization.")
+        if not membership.organization.is_active:
+            raise ApiError("forbidden", "Your account is not attached to an active organization.")
+
+        # Now that the org is known, open the org context so the RLS policy
+        # on permissions_role lets the role row be read.
+        db.set_organization_context(membership.organization_id)
+        role = Role.unscoped.filter(pk=membership.role_id).first()
+        if role is None:
+            raise ApiError("forbidden", "Your account is not attached to an active organization.")
+        membership.role = role
     return membership
 
 

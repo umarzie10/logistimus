@@ -10,6 +10,8 @@ No stack traces, SQL, or settings ever reach the client (SECURITY_PLAN §10).
 
 from __future__ import annotations
 
+import logging
+
 from django.core.exceptions import PermissionDenied as DjangoPermissionDenied
 from django.http import Http404
 from django.utils.encoding import force_str
@@ -18,6 +20,8 @@ from rest_framework.response import Response
 from rest_framework.views import exception_handler as drf_exception_handler
 
 from apps.core.context import get_request_id
+
+logger = logging.getLogger(__name__)
 
 # Stable error code registry — keep in sync with docs/backend/API_SPECIFICATION.md §25
 ERROR_CODES = frozenset(
@@ -221,10 +225,16 @@ def api_exception_handler(exc, context) -> Response:
     response = drf_exception_handler(exc, context)
     if response is None:
         # Unhandled exception: log server-side, return opaque envelope
+        logger.exception("Unhandled API exception")
         return Response(
             error_payload("internal_error", "An unexpected error occurred."),
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
+    if response.status_code >= 500:
+        # DRF turns an unexpected exception into a 500 response, so the
+        # traceback never reaches Django's own request logger. Log it here —
+        # without this, production 500s are undiagnosable.
+        logger.exception("Unhandled API exception -> %s", response.status_code)
 
     if isinstance(exc, exceptions.ValidationError):
         code = "validation_error"

@@ -3,6 +3,10 @@ node_modules/
 .pnp
 .pnp.*
 
+# Railway IaC support package (installed at the repo root for `railway config`)
+/package.json
+/package-lock.json
+
 # Next.js Build
 .next/
 out/

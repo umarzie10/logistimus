@@ -334,6 +334,15 @@ LOGGING = {
     "loggers": {
         "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
         "apps": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        # django.request carries the exception traceback (exc_info) for 5xx
+        # responses. Without a dedicated logger the traceback is folded into
+        # the "django" logger and truncated in aggregated log views, which
+        # makes production 500s impossible to diagnose.
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
+        },
     },
 }
 

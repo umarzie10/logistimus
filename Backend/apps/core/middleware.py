@@ -10,12 +10,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import uuid
 
 from django.db import connection, transaction
 
 from apps.core import context
 from apps.core.exceptions import error_payload
+
+logger = logging.getLogger(__name__)
 
 
 class RequestContextMiddleware:
@@ -67,6 +70,15 @@ class ApiErrorEnvelopeMiddleware:
         if getattr(response, "streaming", False):
             return response
         accept = request.headers.get("Accept", "")
+        if response.status_code >= 500:
+            # Django only logs `django.request` for responses it produced
+            # itself; an exception raised inside the view is swallowed by
+            # the exception handler, so the traceback would never reach the
+            # logs. Log it explicitly — without this, production 500s are
+            # undiagnosable.
+            logger.exception(
+                "Unhandled API error: %s %s", request.method, request.path
+            )
         if "text/html" in accept and "application/json" not in accept:
             return response  # human browser navigation in DEBUG — keep the page
 

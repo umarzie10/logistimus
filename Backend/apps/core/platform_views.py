@@ -301,11 +301,20 @@ class PlatformSystemHealthView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
                 cursor.fetchone()
-                if connection.vendor == "postgresql":
-                    cursor.execute("SELECT PostGIS_Version();")
-                    postgis_ver = cursor.fetchone()[0]
         except Exception:
             db_ok = False
+        # PostGIS is OPTIONAL. The probe runs in its own try/except so a
+        # database without the extension (e.g. Railway's managed Postgres)
+        # still reports `connected: true` — only `postgis_version` stays
+        # null. Folding it into the connectivity probe made a missing
+        # extension look like a dead database.
+        if db_ok and connection.vendor == "postgresql":
+            try:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT PostGIS_Version();")
+                    postgis_ver = cursor.fetchone()[0]
+            except Exception:
+                postgis_ver = None
         db_latency = int((time.perf_counter() - start) * 1000)
 
         cache_ok = True

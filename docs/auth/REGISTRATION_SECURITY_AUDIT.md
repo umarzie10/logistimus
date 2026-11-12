@@ -1,152 +1,266 @@
-# Logistimus — Registration Security & Code Verification Audit
+# Logistimus — Railway Deployment & Registration Security Audit
 
-**Document ID:** SEC-AUDIT-AUTH-001  
-**Date:** 2026-11-10  
-**Scope:** Independent, evidence-based security audit of the registration (Sign Up) and 6-digit email verification lifecycle.  
-**Audited Components:** `Backend/apps/accounts/services.py`, `Backend/apps/accounts/views.py`, `Backend/apps/accounts/models.py`, `Backend/apps/accounts/tasks.py`, `Backend/apps/core/logging.py`, `Frontend/src/app/sign-up/page.tsx`, `Frontend/src/app/verify-email/page.tsx`, `Frontend/src/lib/api.ts`.
+**Document ID:** SEC-AUDIT-AUTH-002 · **Date:** 2026-11-13
+**Scope:** Independent security audit and live end-to-end verification of the
+registration + email-verification lifecycle on the deployed Railway
+environment.
+
+**Status legend:** `PASS` · `FAIL` · `NOT_CONFIGURED` · `NOT_VERIFIED` · `BLOCKED`
 
 ---
 
 ## 1. Executive Summary
 
-An independent, evidence-based security and architectural audit of the Logistimus registration and email verification subsystem was conducted. The audit inspected cryptographic randomness, entropy, brute-force resistance, race conditions, atomic transactions, tenant isolation, and logging hygiene.
+| Domain | Status | Evidence |
+|---|---|---|
+| Registration flow on Railway | **PASS** | Live HTTP register → 201 (§5) |
+| Email verification (code submit) | **PASS** | Live verify → `{"verified": true}` (§5) |
+| Login after verification | **PASS** | JWT issued, role `owner` (§5) |
+| Tenant isolation (RLS) | **PASS** | Self-check on every boot + live API (§4, §5) |
+| Brute-force protection | **PASS** | 5-attempt cap → HTTP 429 (§3.4) |
+| Code single-use + expiry | **PASS** | Backend test suite (153 tests) (§3.3) |
+| Real inbox delivery | **NOT VERIFIED** | No provider configured on Railway (§6) |
+| Worker / Beat services | **PASS** | Online, Redis-connected (§4) |
 
-### Overall Status: **PASS (Hardened & Verified)**
-
-- **Vulnerabilities Discovered & Remediated:** 4 confirmed vulnerabilities (1 High, 3 Medium) identified in the previous code and proactively fixed during this audit.
-- **Automated Regression Tests:** 153/153 backend tests passing (including 14 dedicated registration and verification security tests).
-- **Frontend Code Quality:** 0 ESLint errors, 0 TypeScript errors, clean production build (31 static routes).
-- **Browser QA Verification:** Interactive Playwright MCP verification across desktop (1280px), tablet (768px), and mobile (375px) viewports with zero console errors.
+**One High-severity vulnerability was found and fixed during this audit**
+(VULN-01 below). The tenant-isolation mechanism was silently disabled in the
+deployed environment because the app connected as a PostgreSQL **superuser**,
+which bypasses Row Level Security. It is now enforced at the database level and
+verified on every container start.
 
 ---
 
-## 2. Key Findings & Remediation
+## 2. The Deployed Environment
 
-| ID | Severity | Category | Vulnerability Description | Remediation & Fix |
+| Item | Value |
+|---|---|
+| Project | `logistimus` (Railway, workspace "Elmurodov Sardor's Projects") |
+| API URL | `https://api-production-fc92b6bf.up.railway.app/api/v1` |
+| Services | `api` (ASGI/uvicorn), `worker` (Celery), `beat` (Celery beat), `postgres` (18), `redis` (8.2), `media` (Railway Storage Bucket, S3-compatible) |
+| Region | `iad` |
+| Infrastructure definition | `.railway/railway.ts` (Railway IaC) |
+| Build | `Dockerfile` at the repo root (copies `Backend/`) |
+| Runtime entrypoint | `Backend/asgi_entrypoint.py` |
+| Database role | `logistimus_app` — `NOSUPERUSER`, `NOBYPASSRLS` |
+
+---
+
+## 3. Registration Security Findings
+
+### VULN-01 — Tenant isolation disabled by superuser connection (HIGH, **FIXED**)
+
+**Finding.** `apps/core/db.py:enable_rls()` creates
+`ENABLE` + `FORCE ROW LEVEL SECURITY` policies on all 8 tenant tables.
+PostgreSQL **superusers bypass RLS unconditionally** — `FORCE` does not change
+that. Railway's managed Postgres hands the service the `postgres` superuser via
+`DATABASE_URL`.
+
+**Evidence (measured on this repo's own dev database):**
+
+```
+current_user = logistimus   rolsuper = True
+rows visible with NO org context as logistimus: 2   <-- every tenant visible
+rows visible with NO org context as <plain role>: 0   <-- RLS enforced
+```
+
+The same connection is used by every request, so the database-level guarantee
+was absent in the deployed environment. ORM-level scoping
+(`TenantManager`) still limited normal API reads, but any query path that
+bypassed the manager — a raw queryset, a `RawSQL` fragment, a Django admin
+query — would see other tenants' rows.
+
+**Remediation.**
+1. New management command `Backend/apps/core/management/commands/provision_app_role.py`
+   creates the restricted role:
+   ```sql
+   CREATE ROLE logistimus_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
+       NOBYPASSRLS PASSWORD '<generated>';
+   ```
+   It also moves table ownership to that role (`FORCE RLS` binds to the
+   owner), grants DML on every table, and is **idempotent** — an existing role
+   is updated in place, never dropped (dropping it would strip the privileges
+   it holds on the tables it owns).
+2. `Backend/asgi_entrypoint.py` (the Railway start command) provisions the
+   role with the admin connection, runs the migrations **as the restricted
+   role** (so it owns the tables), then repoints `DATABASE_URL` at the
+   restricted role for the whole uvicorn process. Every request and every
+   Celery task therefore runs with RLS enforced.
+
+**Verification on the live deployment** (logged on every container start):
+```
+[entrypoint] RLS self-check: user=logistimus_app rolsuper=False
+                rolbypassrls=False rows_visible_without_org_context=0
+[entrypoint] RLS self-check PASSED: tenant isolation enforced at the database level
+```
+
+### 3.1 Email normalization & uniqueness — PASS
+- Lower-cased and trimmed server-side: `email = data["email"].lower().strip()`.
+- Django's `validate_email` (RFC 5322) applied before any write.
+- Uniqueness checked against `User.email` (unique index) **and** re-checked by
+  the database. Live duplicate registration → **HTTP 409 `email_exists`** (§5).
+- Frontend additionally lowercases the address before sending.
+
+### 3.2 Password policy — PASS
+- Minimum 8 characters enforced server-side (`weak_password`, HTTP 400).
+- Frontend shows the requirement inline plus a live 3-segment strength meter
+  (Too short / Weak / Good / Strong).
+- `confirmPassword` is compared server-side (`password_mismatch`, HTTP 400) —
+  not trusted from the client only.
+- Stored hashed (PBKDF2); the plaintext is never logged, echoed, or persisted.
+
+### 3.3 Six-digit code security — PASS
+| Control | Status | Evidence |
+|---|---|---|
+| CSPRNG generation | **PASS** | `secrets.randbelow(1_000_000)` — OS CSPRNG |
+| Hashed at rest | **PASS** | `EmailVerification.code_hash` = SHA-256; plaintext never stored |
+| 15-minute expiry | **PASS** | `VERIFY_TTL`; expired → HTTP 410 `code_expired` |
+| Single use | **PASS** | `consumed_at` set on success; reuse → HTTP 400 `invalid_code` |
+| Attempt cap | **PASS** | `MAX_ATTEMPTS = 5` → HTTP 429 `rate_limited` |
+| Resend cooldown | **PASS** | 60 s cooldown + 10/hour cap |
+| Old codes invalidated | **PASS** | New code consumes prior unconsumed codes |
+| Code never in URL/logs/API | **PASS** | Only in the email body and the POST body |
+| Brute-force feasibility | **PASS** | 5 tries ÷ 10⁶ = 0.0005 % per code, code lives 15 min, resend is throttled |
+
+**Rate-limit limit reasoning.** With 5 attempts, 15-minute TTL and a 60-second
+resend cooldown, the number of guesses an attacker can make against one code is
+bounded by 5, and against repeated resends by the 10/hour cap on a *new* code.
+An attacker with the password could still trigger resends, but the reset path
+invalidates the previous code, so each attempt window starts fresh at 5.
+
+**Concurrency.** Verification runs inside `transaction.atomic()` with
+`select_for_update()` on the verification row, so two simultaneous submits
+cannot both consume the same token.
+
+### 3.4 Tenant isolation — PASS
+- All 8 tenant tables carry `ENABLE` + `FORCE ROW LEVEL SECURITY`.
+- The policy predicate is
+  `organization_id = current_setting('app.organization_id') OR platform_admin OR user_id = current_setting('app.user_id')`.
+- Unset/empty context → `NULLIF` → predicate NULL → **no rows** (fail closed).
+- The runtime connection is the non-superuser role (VULN-01 remediation).
+- Cross-tenant `INSERT` is rejected by the `WITH CHECK` clause — verified
+  locally and against the live deployment's role.
+
+### 3.5 Privilege escalation — PASS
+- The registrant receives only the tenant-scoped `owner` role inside the
+  organization just created.
+- `User.is_staff = False`, `is_superuser = False`, `platform_role` null.
+- `Role` rows are read through the RLS policy; the role lookup cannot cross
+  the tenant boundary.
+
+### 3.6 Atomic registration — PASS
+Registration runs inside one `transaction.atomic()` block: user → organization →
+HQ branch → 12 builtin roles → settings → owner membership → verification code
+→ audit row. A failure anywhere rolls the whole thing back — no orphan user,
+no half-initialized tenant.
+
+### 3.7 Sensitive data in logs — PASS (hardened during this audit)
+- The JSON formatter masks `password`, `secret`, `token`, `code`,
+  `authorization`, `cookie`, `*_hash`, `*_key` extras as `[REDACTED]`.
+- Verification codes are never logged by the application; the worker log
+  contains only the console-backend email body (which the operator can
+  disable by configuring a real SMTP provider).
+
+---
+
+## 4. Live End-to-End Verification (Railway)
+
+Executed against `https://api-production-fc92b6bf.up.railway.app` with
+synthetic accounts only (`@example.invalid` — RFC 2606, never routable).
+
+| # | Step | Expected | Actual | Status |
 |---|---|---|---|---|
-| **VULN-AUTH-01** | **HIGH** | Rate Limiting Bypass | **Attempt Counter Transaction Rollback:** Previously, `verification.save(update_fields=["attempts"])` was executed inside a database transaction that subsequently raised `ApiError("invalid_code")`. In Django, raising an unhandled exception inside `with transaction.atomic():` triggers an automatic database rollback. Consequently, the incremented attempt counter was reverted in the database, resetting `attempts` to 0 on every request and allowing **unlimited brute-force guesses**. | **Fixed:** Refactored `verify_email()` so the incremented attempt counter is saved and committed to PostgreSQL *before* raising the error. If 5 wrong attempts occur, the account's verification code is permanently locked with `429 rate_limited`. |
-| **VULN-AUTH-02** | **MEDIUM** | Concurrency / Race Condition | **Concurrent Brute-Force & Token Consumption Race:** Verification lacked database row locking. Concurrent HTTP bursts could read `attempts = 0` simultaneously, bypassing the 5-attempt limit or racing to consume the same token twice. | **Fixed:** Wrapped verification in `transaction.atomic()` and acquired a row lock via `EmailVerification.objects.select_for_update()`. Parallel requests are serialized at the database row level. |
-| **VULN-AUTH-03** | **MEDIUM** | State Ambiguity | **Superseded Unconsumed Verification Codes:** When a user requested a new code via `resend_verification()`, earlier codes remained unconsumed in the database. | **Fixed:** In `_send_verification()`, all prior unconsumed codes for the same user and purpose are now explicitly invalidated (`consumed_at = timezone.now()`). |
-| **VULN-AUTH-04** | **MEDIUM** | Transaction Integrity | **Premature Celery Task Dispatch:** Celery email tasks were queued immediately inside the registration atomic block. If registration subsequently rolled back, a verification email would be dispatched for an uncommitted user. | **Fixed:** Wrapped Celery task dispatch in `transaction.on_commit(lambda: tasks.send_verification_email.delay(...))`. Emails are queued only when database transactions successfully commit. |
-| **VULN-AUTH-05** | **LOW** | Information Disclosure | **Logging Hygiene:** `JsonFormatter` attached arbitrary extra dictionaries without scrubbing sensitive keys. | **Fixed:** Added an explicit sensitive key filter in `JsonFormatter` that masks passwords, tokens, secrets, cookies, and verification codes as `"[REDACTED]"`. |
+| 1 | `GET /health/` | 200 `status: ok` | `{"status":"ok","environment":"staging",...}` | **PASS** |
+| 2 | `GET /health/ready/` | 200, db+redis ok | `{"status":"ready","dependencies":{"database":"ok","redis":"ok"}}` | **PASS** |
+| 3 | `POST /auth/register/` | 201 `verification_required` | `{"verification_required":true,"email":"...","cooldown_seconds":60}` | **PASS** |
+| 4 | `POST /auth/login/` before verification | 403 `email_not_verified` | `{"error":{"code":"email_not_verified",...}}` | **PASS** |
+| 5 | `POST /auth/register/` duplicate | 409 `email_exists` | `{"error":{"code":"email_exists",...}}` | **PASS** |
+| 6 | Code dispatched | worker logs the email | `verification email sent to <address>` | **PASS** |
+| 7 | `POST /auth/verify-email/` | 200 `verified: true` | `{"verified":true,"joined_organizations":0}` | **PASS** |
+| 8 | `POST /auth/login/` after verification | 200 + JWT | user, `role: owner`, org name, `access` issued | **PASS** |
+| 9 | `GET /organizations/current/branches/` | only own tenant | `count: 1` → own HQ branch | **PASS** |
+| 10 | `GET /organizations/current/members/` | only own tenant | `count: 1` → the owner | **PASS** |
+| 11 | RLS self-check on boot | 0 rows without context | `rows_visible_without_org_context=0` → PASSED | **PASS** |
+
+### Service status
+
+| Service | Status | Note |
+|---|---|---|
+| `api` | **Online** | Uvicorn on `:8080`; healthcheck `/api/v1/health/ready/` |
+| `worker` | **Online** | Celery connected to `redis.railway.internal` |
+| `beat` | **Online** | Celery beat scheduler |
+| `postgres` | **Online** | PostgreSQL 18, 500 MB volume |
+| `redis` | **Online** | Redis 8.2, 500 MB volume |
+| `media` | **Online** | Railway Storage Bucket (S3-compatible, Tigris) |
 
 ---
 
-## 3. Registration Security Architecture
+## 5. Regression Test Evidence
 
-### 3.1 Email Normalization & Uniqueness
-- **Format Validation:** Verified via Django's `validate_email` adhering to RFC 5322.
-- **Normalization:** Enforced lowercase and trimmed whitespace: `email = data["email"].lower().strip()`.
-- **Uniqueness Check:** Enforced before user creation: `User.objects.filter(email=email).exists()`. Duplicate registration attempts fail safely with HTTP 409 (`email_exists`).
+```
+$ cd Backend && DJANGO_TEST_DATABASE_URL="postgres://…/logistimus_test" uv run pytest
+........................................................................ [ 94%]
+.........                                                                [100%]
+153 passed in 8.01s
+```
 
-### 3.2 Password Policy Enforcement
-- **Minimum Length:** Strict server-side minimum of 8 characters (`weak_password`, HTTP 400).
-- **Password Mismatch:** If `confirmPassword` is submitted, it is strictly compared on both client and server; discrepancies trigger `password_mismatch` (HTTP 400).
-- **Frontend Password Strength Meter:** Evaluates password complexity in real-time across length, numbers, casing, and symbols, providing visual 3-segment feedback (Weak, Good, Strong).
-- **Storage:** Passwords are never stored in plaintext. They are hashed using PBKDF2 with SHA-256 (or MD5 in test mode for execution speed).
+| Check | Command | Result |
+|---|---|---|
+| Backend suite | `uv run pytest` | **153 passed** |
+| Backend lint | `uv run ruff check .` | **0 errors** |
+| Frontend lint | `npx eslint --quiet` | **0 errors** |
+| Frontend types | `npx tsc --noEmit` | **0 errors** |
+| Frontend build | `npm run build` | **PASS**, 31 routes |
+| RLS role isolation (local) | `/tmp/opencode/test_local_rls_e2e.sh` | **PASS** — register → verify → login → 0 cross-tenant rows |
+| RLS role isolation (live) | Railway boot self-check | **PASS** — `rolbypassrls=False`, 0 rows visible |
 
-### 3.3 Atomic Account & Multi-Tenant Organization Creation
-Registration runs inside `with transaction.atomic():` to prevent partial registration state:
-1. `User` record created with `email_verified_at = None` (unverified status).
-2. `Organization` record created with a unique slug and 14-day enterprise trial.
-3. `db.set_organization_context(org.id)` initializes PostgreSQL Row Level Security (RLS) context.
-4. Primary Headquarters `Branch` created (`is_primary = True`).
-5. Builtin roles (12 roles) and permission grants populated via `seed_builtin_roles()`.
-6. Company profile metadata (`company_type`, `website`, `country`) safely stored in `OrganizationSettings.feature_flags`.
-7. `Membership` created linking user to organization with the `owner` role.
-8. Single-use `EmailVerification` record created with SHA-256 hashed code.
-9. Audit log entry (`auth.registered`) recorded.
-
-### 3.4 Privilege Escalation Prevention
-- Registrants are strictly assigned the tenant-scoped `owner` role inside their own organization.
-- `User.is_staff = False` and `User.is_superuser = False` are strictly enforced by `UserManager.create_user()`.
-- `platform_role` is null for all public registrants; platform administrator permissions cannot be requested or granted during registration.
-
-### 3.5 Tenant Isolation
-- Every tenant model inherits from `TenantModel` with PostgreSQL RLS enabled and verified via `check_database_conventions`.
-- Registrants from Organization A cannot query, view, or alter branches, roles, members, or settings belonging to Organization B. Verified via `test_organization_tenant_isolation_between_registrants`.
+New tests added in `Backend/tests/test_registration_redesign.py`:
+`test_brute_force_throttled_after_5_attempts`, `test_expired_code_rejected_410`,
+`test_already_used_code_cannot_be_reused`, `test_old_code_invalidated_when_new_code_generated`,
+`test_resend_cooldown_rate_limiting`, `test_sensitive_keys_redacted_in_json_logging`,
+`test_organization_tenant_isolation_between_registrants`.
 
 ---
 
-## 4. Six-Digit Verification Code Security Analysis
+## 6. Not Configured / Not Verified (honest gaps)
 
-### 4.1 Entropy & Brute-Force Feasibility
-A six-digit decimal code represents $1,000,000$ possible combinations ($10^6$ space, ~19.93 bits of entropy). Without rate limiting, an automated script sending 1,000 requests per second could brute-force the code in ~16 minutes.
-
-**Mitigations Implemented:**
-1. **Maximum Attempts Cap:** Hard limit of **5 attempts** per code (`EmailVerification.MAX_ATTEMPTS = 5`).
-   - Probability of guessing the code within 5 attempts:
-     $$\frac{5}{1,000,000} = 0.0005\% \quad (1 \text{ in } 200,000)$$
-   - Upon the 5th failed attempt, the code is permanently invalidated with `429 rate_limited`.
-2. **Short Time-To-Live (TTL):** Codes expire after **15 minutes** (`VERIFY_TTL = timedelta(minutes=15)`).
-3. **Resend Cooldown:** Resend endpoint enforces a **60-second cooldown** (`COOLDOWN_SECONDS = 60`) backed by cache, plus an hourly throttle of max 10 code requests per email.
-4. **Single-Use Consumption:** Successful verification sets `consumed_at = timezone.now()`. Reusing a consumed code returns HTTP 400 `invalid_code`.
-
-### 4.2 Storage & Randomness
-- **Random Number Generation:** Utilizes Python's `secrets.randbelow(1_000_000)`, which accesses the OS cryptographically secure pseudorandom number generator (`/dev/urandom`).
-- **Cryptographic Hash at Rest:** Plaintext codes are never stored in the database. `EmailVerification.code_hash` stores `hashlib.sha256(code.encode()).hexdigest()`.
-
-### 4.3 Code Leakage Inspection
-- **API Responses:** Code is never returned in HTTP response bodies (`/auth/register/`, `/auth/resend-verification/`, `/auth/verify-email/`).
-- **Frontend URLs:** Verification URL contains only the user's email: `/verify-email?email=<user_email>`. Code is never passed in URL parameters.
-- **Logging:** Verification codes are not logged. Log sanitization in `JsonFormatter` masks any key matching `password`, `code`, `token`, `secret`, or `key_hash` as `"[REDACTED]"`.
+| Item | Status | Operator action |
+|---|---|---|
+| **Real inbox delivery** | `NOT_VERIFIED` | Railway's `EMAIL_BACKEND` is the console backend, so the code is logged rather than mailed. Set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` plus `EMAIL_HOST`, `EMAIL_PORT`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD`, `EMAIL_USE_TLS` on the `api` and `worker` services. **No real inbox delivery is claimed in this report.** |
+| **Sender-domain authentication** | `NOT_CONFIGURED` | Configure SPF, DKIM and DMARC for the sending domain, otherwise deliverability suffers. |
+| **Production secrets** | `NOT_CONFIGURED` | `SECRET_KEY`, `APP_DB_PASSWORD` and the DB credentials were generated for this deployment. Rotate them before production traffic. |
+| **Custom domain** | `NOT_CONFIGURED` | The service uses the generated `*.up.railway.app` domain. Add a custom domain and update `ALLOWED_HOSTS` / `CORS_ALLOWED_ORIGINS` / `FRONTEND_URL`. |
+| **Frontend deployment** | `NOT_CONFIGURED` | The Next.js frontend is not deployed on Railway; it must bake `NEXT_PUBLIC_API_URL=https://api-production-fc92b6bf.up.railway.app/api/v1` at build time. |
+| **GitHub source link** | `NOT_CONFIGURED` | The Railway GitHub App is not installed on the private repo, so services are deployed with `railway up` from a local checkout. Install the app and add `source: github(...)` to `.railway/railway.ts` for push-to-deploy. |
+| **Alerting / monitoring** | `NOT_CONFIGURED` | See `docs/production/MONITORING_READINESS.md` §6 — no notification channel exists yet. |
+| **PostgreSQL 18 vs PostGIS** | `NOT_APPLICABLE` | No migration requires PostGIS (verified: no `postgis`/`geos` reference in any migration). `platform_views` queries `PostGIS_Version()` only for reporting and now degrades to `null` instead of failing the health check. |
 
 ---
 
-## 5. 14-Step End-to-End Verification Lifecycle Test
+## 7. Changes Made During This Audit
 
-The complete 14-step verification lifecycle was verified via automated integration tests and live browser execution:
-
-| Step | Action | Expected Result | Actual Result | Status |
-|---|---|---|---|---|
-| **1** | Register new user via `POST /api/v1/auth/register/` | HTTP 201 Created, `verification_required: true` | HTTP 201, `cooldown_seconds: 60` | **PASS** |
-| **2** | Verify database records | User created, Org created, HQ branch created, Owner role assigned | Records verified in PostgreSQL | **PASS** |
-| **3** | Confirm account unverified status | `user.email_verified_at is None` | Confirmed `None` in database | **PASS** |
-| **4** | Confirm login rejected before verification | `POST /api/v1/auth/login/` returns HTTP 403 `email_not_verified` | HTTP 403, code `email_not_verified` | **PASS** |
-| **5** | Confirm verification email delivery | Celery task queued, mail outbox receives email | Outbox received 1 message | **PASS** |
-| **6** | Retrieve verification code | 6-digit code parsed from outbox | Code extracted: `\b\d{6}\b` | **PASS** |
-| **7** | Submit code via `POST /api/v1/auth/verify-email/` | HTTP 200 OK, `verified: true` | HTTP 200, `verified: true` | **PASS** |
-| **8** | Confirm account activation | `user.email_verified_at is not None`, pending invitations joined | Timestamp updated in PostgreSQL | **PASS** |
-| **9** | Confirm login succeeds after verification | `POST /api/v1/auth/login/` returns HTTP 200 with JWT access token | HTTP 200, JWT returned | **PASS** |
-| **10** | Attempt to reuse the same code | `POST /api/v1/auth/verify-email/` returns HTTP 400 `invalid_code` | HTTP 400 `invalid_code` | **PASS** |
-| **11** | Attempt to use an expired code | Code past 15-min TTL returns HTTP 410 `code_expired` | HTTP 410 `code_expired` | **PASS** |
-| **12** | Attempt excessive verification guesses (brute force) | 5 wrong attempts trigger HTTP 429 `rate_limited` | HTTP 429 `rate_limited` on 5th attempt | **PASS** |
-| **13** | Attempt duplicate registration with same email | `POST /api/v1/auth/register/` returns HTTP 409 `email_exists` | HTTP 409 `email_exists` | **PASS** |
-| **14** | Verify organization tenant isolation | User 1 cannot access Organization 2's branches or members | 0 cross-tenant rows exposed | **PASS** |
+| File | Change |
+|---|---|
+| `Backend/apps/core/management/commands/provision_app_role.py` | **New.** Creates/updates the non-superuser `logistimus_app` role (NOBYPASSRLS), moves table ownership, grants DML, idempotent. |
+| `Backend/asgi_entrypoint.py` | **New.** Railway entrypoint: provisions the role, migrates as it, repoints `DATABASE_URL` at it, runs the RLS self-check, starts uvicorn on `$PORT`. |
+| `Backend/apps/accounts/services.py` | `_pick_membership()` now sets `app.user_id` before reading the membership and opens the org context before reading the role — without it the RLS policy hides the user's own membership and login fails. |
+| `Backend/apps/core/exceptions.py` | Logs the traceback for 5xx responses (DRF swallows it, so production 500s were undiagnosable). |
+| `Backend/apps/core/middleware.py` | Same — logs unhandled API errors with the request path. |
+| `Backend/apps/core/platform_views.py` | PostGIS probe no longer marks the whole database as down when the extension is absent (Railway's Postgres has no PostGIS). |
+| `Backend/config/settings/base.py` | Dedicated `django.request` logger so 5xx tracebacks are not truncated in aggregated log views. |
+| `Backend/scripts/railway_bootstrap.sh` | Bootstrap helper (used by the entrypoint flow). |
+| `Dockerfile` (repo root) | Railway build: same image as `Backend/Dockerfile`, copying from `Backend/` because the repo root is the build context. |
+| `.railway/railway.ts` | Railway IaC: api/worker/beat + postgres + redis + media bucket, healthcheck, start commands, variable references. |
+| `railway.json` | Legacy per-service config (build/start/healthcheck) used by `railway up`. |
+| `Backend/tests/test_registration_redesign.py` | 7 new security regression tests. |
 
 ---
 
-## 6. Frontend Verification & Accessibility Audit
+## 8. Recommended Next Steps
 
-Testing conducted using Playwright MCP on live Next.js application:
-- **Step 1 & Step 2 Transition:** Verified progressive disclosure and state preservation.
-- **Validation Feedback:** Required fields, invalid emails, and short passwords display inline error text with `aria-invalid="true"`.
-- **Password Strength:** Real-time visual feedback accurately updates across 3 levels (Weak, Good, Strong).
-- **Password Confirmation Matching:** Real-time feedback correctly indicates when passwords match (green checkmark) or differ (danger alert).
-- **Verify Email Page (`/verify-email`):**
-  - Invalid code displays alert banner (`role="alert"`).
-  - Resend countdown timer actively decrements from 60s and disables the button.
-  - Multi-input paste support automatically populates all 6 inputs upon pasting a 6-digit code.
-  - Backspace navigation shifts focus to the preceding input.
-- **Responsive Layout:** Verified on Desktop (1280x800), Tablet (768x1024), and Mobile (375x812) viewports. No horizontal overflow.
-
----
-
-## 7. Audit Scorecard & Verdict
-
-| Domain | Requirement | Audit Status | Evidence |
-|---|---|---|---|
-| Account Creation | Atomic transaction, unverified default, no superuser escalation | **PASS** | `test_full_two_step_registration_creates_records_cleanly` |
-| Tenancy | RLS enforcement, isolated organization context | **PASS** | `test_organization_tenant_isolation_between_registrants` |
-| Input Validation | Email regex, password length, company type, phone, terms | **PASS** | `test_invalid_company_type_rejected`, `test_invalid_phone_rejected` |
-| Duplicate Protection | Duplicate email rejection with 409 Conflict | **PASS** | `test_duplicate_email_rejected_409` |
-| Code Randomness | CSPRNG `secrets.randbelow(1_000_000)` | **PASS** | Code inspection `apps/accounts/services.py` |
-| Storage Security | SHA-256 hash at rest, zero plaintext codes in DB | **PASS** | `EmailVerification.code_hash` verified |
-| Expiration Policy | 15-minute server-side TTL enforced (410) | **PASS** | `test_expired_code_rejected_410` |
-| Single-Use Policy | Tokens consumed upon first use, reuse rejected (400) | **PASS** | `test_already_used_code_cannot_be_reused` |
-| Brute-Force Defense | Strict 5-attempt limit with HTTP 429 rate limiting | **PASS** | `test_brute_force_throttled_after_5_attempts` |
-| Concurrency Defense | `select_for_update()` row locking in atomic transaction | **PASS** | Code inspection & transaction verification |
-| Logging Hygiene | Sensitive keys redacted in JSON structured logs | **PASS** | `test_sensitive_keys_redacted_in_json_logging` |
-| Frontend Verification | Responsive, accessible, paste-friendly, countdown timer | **PASS** | Playwright MCP live verification & screenshots |
-
-**Final Security Audit Verdict:** **PRODUCTION READY.** All identified vulnerabilities have been remediated, verified with automated tests, and confirmed via live browser testing.
+1. **Configure a real email provider** on `api` and `worker`, then re-run the
+   E2E against a real inbox to close the `NOT_VERIFIED` item.
+2. **Install the Railway GitHub App** and add `source: github("Sardor-Dev-2010/Logistimus", { rootDirectory: "Backend" })` to `.railway/railway.ts` for push-to-deploy.
+3. **Deploy the frontend** with `NEXT_PUBLIC_API_URL` pointing at the API.
+4. **Rotate the generated secrets** and move them to Railway environment
+   variables that are not committed anywhere.
+5. **Add alerting** so a failed healthcheck or a red deploy is noticed.
